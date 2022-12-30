@@ -106,7 +106,7 @@ impl Interpreter {
     }
 
     /// loop steps until we are finished with execution
-    pub fn run<H: Host, SPEC: Spec>(&mut self, host: &mut H) -> Return {
+    pub fn run<H: Host<T>, SPEC: Spec, T>(&mut self, host: &mut H, extra: &mut T) -> Return {
         //let timer = std::time::Instant::now();
         let mut ret = Return::Continue;
         // add first gas_block
@@ -115,25 +115,14 @@ impl Interpreter {
         }
         while ret == Return::Continue {
             // step
-            if H::INSPECT {
-                let ret = host.step(self, SPEC::IS_STATIC_CALL);
-                if ret != Return::Continue {
-                    return ret;
-                }
-            }
+            host.step(self, SPEC::IS_STATIC_CALL, extra);
             let opcode = unsafe { *self.instruction_pointer };
             // Safety: In analysis we are doing padding of bytecode so that we are sure that last.
             // byte instruction is STOP so we are safe to just increment program_counter bcs on last instruction
             // it will do noop and just stop execution of this contract
             self.instruction_pointer = unsafe { self.instruction_pointer.offset(1) };
-            ret = eval::<H, SPEC>(opcode, self, host);
+            ret = eval::<T, H, SPEC>(opcode, self, host, extra);
 
-            if H::INSPECT {
-                let ret = host.step_end(self, SPEC::IS_STATIC_CALL, ret);
-                if ret != Return::Continue {
-                    return ret;
-                }
-            }
         }
         ret
     }

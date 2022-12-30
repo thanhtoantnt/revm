@@ -76,7 +76,7 @@ pub enum Return {
 }
 
 #[inline(always)]
-pub fn eval<H: Host, S: Spec>(opcode: u8, interp: &mut Interpreter, host: &mut H) -> Return {
+pub fn eval<T, H: Host<T>, S: Spec>(opcode: u8, interp: &mut Interpreter, host: &mut H, extra: &mut T) -> Return {
     match opcode {
         /*12_u8..=15_u8 => Return::OpcodeNotFound,
         30_u8..=31_u8 => Return::OpcodeNotFound,
@@ -127,8 +127,8 @@ pub fn eval<H: Host, S: Spec>(opcode: u8, interp: &mut Interpreter, host: &mut H
         opcode::SHA3 => system::sha3(interp),
 
         opcode::ADDRESS => system::address(interp),
-        opcode::BALANCE => host::balance::<H, S>(interp, host),
-        opcode::SELFBALANCE => host::selfbalance::<H, S>(interp, host),
+        opcode::BALANCE => host::balance::<T, H, S>(interp, host),
+        opcode::SELFBALANCE => host::selfbalance::<T, H, S>(interp, host),
         opcode::CODESIZE => system::codesize(interp),
         opcode::CODECOPY => system::codecopy(interp),
         opcode::CALLDATALOAD => system::calldataload(interp),
@@ -212,38 +212,38 @@ pub fn eval<H: Host, S: Spec>(opcode: u8, interp: &mut Interpreter, host: &mut H
         opcode::RETURN => control::ret(interp),
         opcode::REVERT => control::revert::<S>(interp),
         opcode::INVALID => Return::InvalidOpcode,
-        opcode::BASEFEE => host_env::basefee::<H, S>(interp, host),
+        opcode::BASEFEE => host_env::basefee::<T, H, S>(interp, host),
         opcode::ORIGIN => host_env::origin(interp, host),
         opcode::CALLER => system::caller(interp),
         opcode::CALLVALUE => system::callvalue(interp),
         opcode::GASPRICE => host_env::gasprice(interp, host),
-        opcode::EXTCODESIZE => host::extcodesize::<H, S>(interp, host),
-        opcode::EXTCODEHASH => host::extcodehash::<H, S>(interp, host),
-        opcode::EXTCODECOPY => host::extcodecopy::<H, S>(interp, host),
+        opcode::EXTCODESIZE => host::extcodesize::<T, H, S>(interp, host),
+        opcode::EXTCODEHASH => host::extcodehash::<T, H, S>(interp, host),
+        opcode::EXTCODECOPY => host::extcodecopy::<T, H, S>(interp, host),
         opcode::RETURNDATASIZE => system::returndatasize::<S>(interp),
         opcode::RETURNDATACOPY => system::returndatacopy::<S>(interp),
         opcode::BLOCKHASH => host::blockhash(interp, host),
         opcode::COINBASE => host_env::coinbase(interp, host),
         opcode::TIMESTAMP => host_env::timestamp(interp, host),
         opcode::NUMBER => host_env::number(interp, host),
-        opcode::DIFFICULTY => host_env::difficulty::<H, S>(interp, host),
+        opcode::DIFFICULTY => host_env::difficulty::<T, H, S>(interp, host),
         opcode::GASLIMIT => host_env::gaslimit(interp, host),
-        opcode::SLOAD => host::sload::<H, S>(interp, host),
-        opcode::SSTORE => host::sstore::<H, S>(interp, host),
+        opcode::SLOAD => host::sload::<T, H, S>(interp, host),
+        opcode::SSTORE => host::sstore::<T, H, S>(interp, host),
         opcode::GAS => system::gas(interp),
-        opcode::LOG0 => host::log::<H, S>(interp, 0, host),
-        opcode::LOG1 => host::log::<H, S>(interp, 1, host),
-        opcode::LOG2 => host::log::<H, S>(interp, 2, host),
-        opcode::LOG3 => host::log::<H, S>(interp, 3, host),
-        opcode::LOG4 => host::log::<H, S>(interp, 4, host),
-        opcode::SELFDESTRUCT => host::selfdestruct::<H, S>(interp, host),
-        opcode::CREATE => host::create::<H, S>(interp, false, host), //check
-        opcode::CREATE2 => host::create::<H, S>(interp, true, host), //check
-        opcode::CALL => host::call::<H, S>(interp, CallScheme::Call, host), //check
-        opcode::CALLCODE => host::call::<H, S>(interp, CallScheme::CallCode, host), //check
-        opcode::DELEGATECALL => host::call::<H, S>(interp, CallScheme::DelegateCall, host), //check
-        opcode::STATICCALL => host::call::<H, S>(interp, CallScheme::StaticCall, host), //check
-        opcode::CHAINID => host_env::chainid::<H, S>(interp, host),
+        opcode::LOG0 => host::log::<T, H, S>(interp, 0, host),
+        opcode::LOG1 => host::log::<T, H, S>(interp, 1, host),
+        opcode::LOG2 => host::log::<T, H, S>(interp, 2, host),
+        opcode::LOG3 => host::log::<T, H, S>(interp, 3, host),
+        opcode::LOG4 => host::log::<T, H, S>(interp, 4, host),
+        opcode::SELFDESTRUCT => host::selfdestruct::<T, H, S>(interp, host),
+        opcode::CREATE => host::create::<T, H, S>(interp, false, host), //check
+        opcode::CREATE2 => host::create::<T, H, S>(interp, true, host), //check
+        opcode::CALL => host::call::<T, H, S>(interp, CallScheme::Call, host, extra), //check
+        opcode::CALLCODE => host::call::<T, H, S>(interp, CallScheme::CallCode, host, extra), //check
+        opcode::DELEGATECALL => host::call::<T, H, S>(interp, CallScheme::DelegateCall, host, extra), //check
+        opcode::STATICCALL => host::call::<T, H, S>(interp, CallScheme::StaticCall, host, extra), //check
+        opcode::CHAINID => host_env::chainid::<T, H, S>(interp, host),
         _ => Return::OpcodeNotFound,
     }
 }

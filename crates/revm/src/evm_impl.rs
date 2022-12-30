@@ -491,7 +491,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
             self.inspector
                 .initialize_interp(&mut interp, &mut self.data, SPEC::IS_STATIC_CALL);
         }
-        let exit_reason = interp.run::<Self, SPEC>(self);
+        let mut v = 0;
+        let exit_reason = interp.run::<Self, SPEC, u64>(self, &mut v);
 
         // Host error if present on execution\
         let (ret, address, gas, out) = match exit_reason {
@@ -685,7 +686,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 self.inspector
                     .initialize_interp(&mut interp, &mut self.data, false);
             }
-            let exit_reason = interp.run::<Self, SPEC>(self);
+            let mut v = 0;
+            let exit_reason = interp.run::<Self, SPEC, u64>(self, &mut v);
             if matches!(exit_reason, return_ok!()) {
                 self.data.journaled_state.checkpoint_commit();
             } else {
@@ -704,13 +706,13 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
     }
 }
 
-impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
+impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u64>
     for EVMImpl<'a, GSPEC, DB, INSPECT>
 {
     const INSPECT: bool = INSPECT;
     type DB = DB;
 
-    fn step(&mut self, interp: &mut Interpreter, is_static: bool) -> Return {
+    fn step(&mut self, interp: &mut Interpreter, is_static: bool, _: &mut u64) -> Return {
         self.inspector.step(interp, &mut self.data, is_static)
     }
 
@@ -837,7 +839,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
         self.create_inner::<SPEC>(inputs)
     }
 
-    fn call<SPEC: Spec>(&mut self, inputs: &mut CallInputs) -> (Return, Gas, Bytes) {
+    fn call<SPEC: Spec>(&mut self, inputs: &mut CallInputs, _: &mut u64) -> (Return, Gas, Bytes) {
         self.call_inner::<SPEC>(inputs)
     }
 }
@@ -866,12 +868,12 @@ pub fn create2_address(caller: H160, code_hash: H256, salt: U256) -> H160 {
 }
 
 /// EVM context host.
-pub trait Host {
+pub trait Host<T> {
     const INSPECT: bool;
 
     type DB: Database;
 
-    fn step(&mut self, interp: &mut Interpreter, is_static: bool) -> Return;
+    fn step(&mut self, interp: &mut Interpreter, is_static: bool, extra: &mut T) -> Return;
     fn step_end(&mut self, interp: &mut Interpreter, is_static: bool, ret: Return) -> Return;
 
     fn env(&mut self) -> &mut Env;
@@ -905,5 +907,5 @@ pub trait Host {
         inputs: &mut CreateInputs,
     ) -> (Return, Option<H160>, Gas, Bytes);
     /// Invoke a call operation.
-    fn call<SPEC: Spec>(&mut self, input: &mut CallInputs) -> (Return, Gas, Bytes);
+    fn call<SPEC: Spec>(&mut self, input: &mut CallInputs, extra: &mut T) -> (Return, Gas, Bytes);
 }
