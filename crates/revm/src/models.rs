@@ -254,7 +254,7 @@ pub struct CfgEnv {
     /// By default, it is set to `false`.
     #[cfg(feature = "optional_eip3607")]
     pub disable_eip3607: bool,
-    /// Disables all gas refunds. This is useful when using chains that have gas refunds disabled e.g. Avalanche.
+    /// Disables alle gas refunds. This is useful when using chains that have gas refunds disabled e.g. Avalanche.
     /// Reasoning behind removing gas refunds can be found in EIP-3298.
     /// By default, it is set to `false`.
     #[cfg(feature = "optional_gas_refund")]
