@@ -10,7 +10,7 @@ use primitive_types::U256;
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Memory {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl Default for Memory {

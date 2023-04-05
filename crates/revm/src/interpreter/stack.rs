@@ -7,7 +7,7 @@ pub const STACK_LIMIT: usize = 1024;
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stack {
-    data: Vec<U256>,
+    pub data: Vec<U256>,
 }
 
 #[cfg(feature = "std")]
