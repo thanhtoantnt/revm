@@ -139,7 +139,7 @@ impl Interpreter {
             host.step(self, true, extra);
             let opcode = unsafe { *self.instruction_pointer };
             if opcode == SLOAD {
-                let slot = self.stack.data[self.stack.data.len() - 2];
+                let slot = self.stack.data[self.stack.data.len() - 1];
                 slots.push(slot);
             }
             // Safety: In analysis we are doing padding of bytecode so that we are sure that last.
