@@ -14,6 +14,8 @@ use crate::{
 };
 use bytes::Bytes;
 use core::ops::Range;
+use primitive_types::U256;
+use crate::opcode::SLOAD;
 
 pub const STACK_LIMIT: u64 = 1024;
 pub const CALL_STACK_LIMIT: u64 = 1024;
@@ -126,6 +128,30 @@ impl Interpreter {
         }
         ret
     }
+
+    pub fn locate_slot<H: Host<T>, SPEC: Spec, T>(&mut self, host: &mut H, extra: &mut T) -> (Return, Vec<U256>) {
+        //let timer = std::time::Instant::now();
+        let mut ret = Return::Continue;
+        let mut slots = Vec::new();
+
+        while ret == Return::Continue {
+            // step
+            host.step(self, true, extra);
+            let opcode = unsafe { *self.instruction_pointer };
+            if opcode == SLOAD {
+                let slot = self.stack.data[self.stack.data.len() - 2];
+                slots.push(slot);
+            }
+            // Safety: In analysis we are doing padding of bytecode so that we are sure that last.
+            // byte instruction is STOP so we are safe to just increment program_counter bcs on last instruction
+            // it will do noop and just stop execution of this contract
+            self.instruction_pointer = unsafe { self.instruction_pointer.offset(1) };
+            ret = eval::<T, H, SPEC>(opcode, self, host, extra);
+
+        }
+        (ret, slots)
+    }
+
 
     /// Copy and get the return value of the interp, if any.
     pub fn return_value(&self) -> Bytes {
