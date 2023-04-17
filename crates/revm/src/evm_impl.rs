@@ -1,18 +1,8 @@
-use crate::{
-    db::Database,
-    gas,
-    interpreter::{self, bytecode::Bytecode},
-    interpreter::{Contract, Interpreter},
-    journaled_state::{Account, JournaledState, State},
-    models::SelfDestructResult,
-    precompiles, return_ok, return_revert, AnalysisKind, CallContext, CallInputs, CallScheme,
-    CreateInputs, CreateScheme, Env, ExecutionResult, Gas, Inspector, Log, Return, Spec,
-    SpecId::{self, *},
-    TransactOut, TransactTo, Transfer, KECCAK_EMPTY,
-};
+use crate::{db::Database, gas, interpreter::{self, bytecode::Bytecode}, interpreter::{Contract, Interpreter}, journaled_state::{Account, JournaledState, State}, models::SelfDestructResult, precompiles, return_ok, return_revert, AnalysisKind, CallContext, CallInputs, CallScheme, CreateInputs, CreateScheme, Env, ExecutionResult, Gas, Inspector, Log, Return, Spec, SpecId::{self, *}, TransactOut, TransactTo, Transfer, KECCAK_EMPTY, BytecodeLocked, LatestSpec};
 use alloc::vec::Vec;
 use bytes::Bytes;
 use core::{cmp::min, marker::PhantomData};
+use std::sync::Arc;
 use hashbrown::HashMap as Map;
 use primitive_types::{H160, H256, U256};
 use revm_precompiles::{Precompile, PrecompileOutput, Precompiles};
@@ -669,7 +659,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         } else {
             // Create interpreter and execute subcall
             let contract =
-                Contract::new_with_context::<SPEC>(inputs.input.clone(), bytecode, &inputs.context);
+                Contract::new_with_context_not_cloned::<SPEC>(inputs.input.clone(), bytecode, &inputs.context);
 
             #[cfg(feature = "memory_limit")]
             let mut interp = Interpreter::new_with_memory_limit::<SPEC>(
@@ -752,7 +742,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u64>
             .map(|(acc, is_cold)| (acc.info.balance, is_cold))
     }
 
-    fn code(&mut self, address: H160) -> Option<(Bytecode, bool)> {
+    fn code(&mut self, address: H160) -> Option<(Arc<BytecodeLocked>, bool)> {
         let journal = &mut self.data.journaled_state;
         let db = &mut self.data.db;
         let error = &mut self.data.error;
@@ -761,7 +751,9 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u64>
             .load_code(address, db)
             .map_err(|e| *error = Some(e))
             .ok()?;
-        Some((acc.info.code.clone().unwrap(), is_cold))
+        Some((
+            Arc::new(acc.info.code.clone().unwrap().lock::<LatestSpec>())
+            , is_cold))
     }
 
     /// Get code hash of address.
@@ -885,7 +877,7 @@ pub trait Host<T> {
     /// Get balance of address.
     fn balance(&mut self, address: H160) -> Option<(U256, bool)>;
     /// Get code of address.
-    fn code(&mut self, address: H160) -> Option<(Bytecode, bool)>;
+    fn code(&mut self, address: H160) -> Option<(Arc<BytecodeLocked>, bool)>;
     /// Get code hash of address.
     fn code_hash(&mut self, address: H160) -> Option<(H256, bool)>;
     /// Get storage value of address at index.

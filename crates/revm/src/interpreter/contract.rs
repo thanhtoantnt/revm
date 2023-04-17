@@ -9,7 +9,7 @@ pub struct Contract {
     pub input: Bytes,
     /// Bytecode contains contract code, size of original code, analysis with gas block and jump table.
     /// Note that current code is extended with push padding and STOP at end.
-    pub bytecode: BytecodeLocked,
+    pub bytecode: Arc<BytecodeLocked>,
     /// Contract address
     pub address: H160,
     /// Caller of the EVM.
@@ -71,7 +71,7 @@ impl Contract {
         let bytecode = bytecode.lock::<SPEC>();
         Self {
             input,
-            bytecode,
+            bytecode: Arc::new(bytecode),
             address,
             caller,
             value,
@@ -101,6 +101,20 @@ impl Contract {
             call_context.caller,
             call_context.apparent_value,
         )
+    }
+
+    pub fn new_with_context_not_cloned<SPEC: Spec>(
+        input: Bytes,
+        bytecode: Arc<BytecodeLocked>,
+        call_context: &CallContext,
+    ) -> Self {
+        Self {
+            input,
+            bytecode,
+            address: call_context.address,
+            caller: call_context.caller,
+            value: call_context.apparent_value,
+        }
     }
 }
 
