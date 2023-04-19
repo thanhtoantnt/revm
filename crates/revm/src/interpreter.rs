@@ -20,6 +20,8 @@ use crate::opcode::SLOAD;
 pub const STACK_LIMIT: u64 = 1024;
 pub const CALL_STACK_LIMIT: u64 = 1024;
 
+pub static mut REVM_TIMEOUT: u64 = 20000000;
+
 pub struct Interpreter {
     /// Contract information and invoking data
     pub contract: Contract,
@@ -115,6 +117,7 @@ impl Interpreter {
         if USE_GAS && !self.gas.record_cost(self.contract.first_gas_block()) {
             return Return::OutOfGas;
         }
+        let mut it = 0;
         while ret == Return::Continue {
             // step
             host.step(self, SPEC::IS_STATIC_CALL, extra);
@@ -124,7 +127,10 @@ impl Interpreter {
             // it will do noop and just stop execution of this contract
             self.instruction_pointer = unsafe { self.instruction_pointer.offset(1) };
             ret = eval::<T, H, SPEC>(opcode, self, host, extra);
-
+            it += 1;
+            if unsafe {it > REVM_TIMEOUT} {
+                return Return::Revert;
+            }
         }
         ret
     }
