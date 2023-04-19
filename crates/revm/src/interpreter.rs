@@ -114,9 +114,6 @@ impl Interpreter {
         //let timer = std::time::Instant::now();
         let mut ret = Return::Continue;
         // add first gas_block
-        if USE_GAS && !self.gas.record_cost(self.contract.first_gas_block()) {
-            return Return::OutOfGas;
-        }
         let mut it = 0;
         while ret == Return::Continue {
             // step
