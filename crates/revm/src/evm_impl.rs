@@ -827,6 +827,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u64>
     fn create<SPEC: Spec>(
         &mut self,
         inputs: &mut CreateInputs,
+        _: &mut u64
     ) -> (Return, Option<H160>, Gas, Bytes) {
         self.create_inner::<SPEC>(inputs)
     }
@@ -897,6 +898,7 @@ pub trait Host<T> {
     fn create<SPEC: Spec>(
         &mut self,
         inputs: &mut CreateInputs,
+        extra: &mut T,
     ) -> (Return, Option<H160>, Gas, Bytes);
     /// Invoke a call operation.
     fn call<SPEC: Spec>(&mut self, input: &mut CallInputs, extra: &mut T) -> (Return, Gas, Bytes);

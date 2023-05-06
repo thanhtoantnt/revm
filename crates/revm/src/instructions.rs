@@ -237,8 +237,8 @@ pub fn eval<T, H: Host<T>, S: Spec>(opcode: u8, interp: &mut Interpreter, host: 
         opcode::LOG3 => host::log::<T, H, S>(interp, 3, host),
         opcode::LOG4 => host::log::<T, H, S>(interp, 4, host),
         opcode::SELFDESTRUCT => host::selfdestruct::<T, H, S>(interp, host),
-        opcode::CREATE => host::create::<T, H, S>(interp, false, host), //check
-        opcode::CREATE2 => host::create::<T, H, S>(interp, true, host), //check
+        opcode::CREATE => host::create::<T, H, S>(interp, false, host, extra), //check
+        opcode::CREATE2 => host::create::<T, H, S>(interp, true, host, extra), //check
         opcode::CALL => host::call::<T, H, S>(interp, CallScheme::Call, host, extra), //check
         opcode::CALLCODE => host::call::<T, H, S>(interp, CallScheme::CallCode, host, extra), //check
         opcode::DELEGATECALL => host::call::<T, H, S>(interp, CallScheme::DelegateCall, host, extra), //check

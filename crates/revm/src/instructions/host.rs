@@ -211,6 +211,7 @@ pub fn create<T, H: Host<T>, SPEC: Spec>(
     interp: &mut Interpreter,
     is_create2: bool,
     host: &mut H,
+    state: &mut T,
 ) -> Return {
     check!(!SPEC::IS_STATIC_CALL);
     if is_create2 {
@@ -257,7 +258,7 @@ pub fn create<T, H: Host<T>, SPEC: Spec>(
         gas_limit,
     };
 
-    let (return_reason, address, gas, return_data) = host.create::<SPEC>(&mut create_input);
+    let (return_reason, address, gas, return_data) = host.create::<SPEC>(&mut create_input, state);
     interp.return_data_buffer = return_data;
 
     match return_reason {
