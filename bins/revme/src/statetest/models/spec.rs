@@ -1,5 +1,5 @@
-use revm::SpecId;
-use serde_derive::*;
+use revm::primitives::SpecId;
+use serde::Deserialize;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Ord, Deserialize)]
 pub enum SpecName {
@@ -21,10 +21,9 @@ pub enum SpecName {
     BerlinToLondonAt5,
     London,
     Merge,
-    #[serde(alias = "Merge+3540+3670")]
-    MergeEOF,
-    #[serde(alias = "Merge+3860")]
-    MergeMeterInitCode,
+    Shanghai,
+    #[serde(other)]
+    Unknown,
 }
 
 impl SpecName {
@@ -42,11 +41,11 @@ impl SpecName {
             Self::Berlin => SpecId::BERLIN,
             Self::London | Self::BerlinToLondonAt5 => SpecId::LONDON,
             Self::Merge => SpecId::MERGE,
-            Self::MergeEOF => SpecId::MERGE_EOF,
-            Self::MergeMeterInitCode => SpecId::MERGE_EOF,
+            Self::Shanghai => SpecId::CANCUN,
             Self::ByzantiumToConstantinopleAt5 | Self::Constantinople => {
                 panic!("Overriden with PETERSBURG")
-            } //_ => panic!("Conversion failed"),
+            }
+            Self::Unknown => panic!("Unknown spec"),
         }
     }
 }

@@ -1,9 +1,11 @@
-use std::{str::FromStr, time::Instant};
+use std::time::Instant;
 
 use bytes::Bytes;
-use primitive_types::H160;
-use revm::{db::BenchmarkDB, Bytecode, TransactTo};
-
+use revm::{
+    db::BenchmarkDB,
+    interpreter::analysis::to_analysed,
+    primitives::{Bytecode, TransactTo},
+};
 extern crate alloc;
 
 fn main() {
@@ -13,27 +15,31 @@ fn main() {
     let mut evm = revm::new();
 
     // execution globals block hash/gas_limit/coinbase/timestamp..
-    evm.env.tx.caller = H160::from_str("0x1000000000000000000000000000000000000000").unwrap();
-    evm.env.tx.transact_to =
-        TransactTo::Call(H160::from_str("0x0000000000000000000000000000000000000000").unwrap());
+    evm.env.tx.caller = "0x1000000000000000000000000000000000000000"
+        .parse()
+        .unwrap();
+    evm.env.tx.transact_to = TransactTo::Call(
+        "0x0000000000000000000000000000000000000000"
+            .parse()
+            .unwrap(),
+    );
     //evm.env.tx.data = Bytes::from(hex::decode("30627b7c").unwrap());
     evm.env.tx.data = Bytes::from(hex::decode("8035F0CE").unwrap());
-    evm.env.cfg.perf_all_precompiles_have_balance = true;
 
     let bytecode_raw = Bytecode::new_raw(contract_data.clone());
     let bytecode_checked = Bytecode::new_raw(contract_data.clone()).to_checked();
-    let bytecode_analysed = Bytecode::new_raw(contract_data).to_analysed::<revm::LondonSpec>();
+    let bytecode_analysed = to_analysed(Bytecode::new_raw(contract_data));
 
     evm.database(BenchmarkDB::new_bytecode(bytecode_raw));
 
     // just to spead up processor.
     for _ in 0..10000 {
-        let (_, _) = evm.transact();
+        let _ = evm.transact().unwrap();
     }
 
     let timer = Instant::now();
     for _ in 0..30000 {
-        let (_, _) = evm.transact();
+        let _ = evm.transact().unwrap();
     }
     println!("Raw elapsed time: {:?}", timer.elapsed());
 
@@ -41,7 +47,7 @@ fn main() {
 
     let timer = Instant::now();
     for _ in 0..30000 {
-        let (_, _) = evm.transact();
+        let _ = evm.transact().unwrap();
     }
     println!("Checked elapsed time: {:?}", timer.elapsed());
 
@@ -49,7 +55,7 @@ fn main() {
 
     let timer = Instant::now();
     for _ in 0..30000 {
-        let (_, _) = evm.transact();
+        let _ = evm.transact().unwrap();
     }
     println!("Analysed elapsed time: {:?}", timer.elapsed());
 }

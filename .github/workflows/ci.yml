@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main,'release/**']
   pull_request:
-    branches: [main]
+    branches: [main,'release/**']
 
 jobs:
   tests-stable:
@@ -51,3 +51,16 @@ jobs:
 
       - name: cargo clippy
         run: cargo +nightly clippy --all --all-features -- -D warnings
+
+      - name: cargo check no-default-features
+        run: |
+          cd crates/revm
+          cargo check --no-default-features
+      - name: cargo check serde
+        run: |
+          cd crates/revm
+          cargo check --no-default-features --features serde
+      - name: cargo check std
+        run: |
+          cd crates/revm
+          cargo check --no-default-features --features std

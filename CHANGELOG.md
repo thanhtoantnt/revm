@@ -1,8 +1,56 @@
 Because this is workspace with multi libraries, tags will be simplified, and with this document you can match version of project with git tag.
 
+# v24 tag
+date: 03.05.2023
+
+Cosnensus bug inside journal and some small changes.
+
+* revm: v3.3.0
+* revm-precompile: v2.0.3
+* revm-primitives: v1.1.2
+* revm-interpreter: v1.1.2
+
+# v23 tag
+date: 19.04.2023
+
+consensus bug fix inside journal.
+
+* revm: v3.2.0
+
+# v22 tag
+date: 14.04.2023
+
+Fix for k256 build
+
+* revm: v3.1.1
+* revm-precompile: v2.0.2
+* revm-primitives: v1.1.1
+* revm-interpreter: v1.1.1
+
+# v21 tag
+date 04.04.2023
+
+Shanghai supported and gas block optimization removed.
+
+* revm: v3.1.0
+* revm-precompile: v2.0.1
+* revm-primitives: v1.1.0
+* revm-interpreter: v1.1.0
+
+# v20 tag
+date 29.01.2023
+Big release. primitives and interpreter libs and optimizations.
+This tag can be found in `main`
+
+* revm: v3.0.0
+* revm-precompile: v2.0.0
+* revm-primitives: v1.0.0
+* revm-interpreter: v1.0.0
+
 # v19 tag
 data 22.11.2022
 Bump dependency in revm and precompiles
+Found on same branch as v17 tag.
 
 * revm: v2.3.1
 * revm_precompiles: v1.1.2

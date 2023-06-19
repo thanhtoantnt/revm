@@ -1,3 +1,154 @@
+# v3.3.0
+date: 03.05.2023
+
+Consensus bug:
+* cde2f2d - fix: revert of selfdestruct with same target address (#475) (2 hours ago) <Roman Krasiuk>
+
+Other small changes:
+* bd0fad8 - (HEAD -> reles, origin/main, origin/HEAD) chore(deps): bump tokio from 1.27.0 to 1.28.0 (#470) (52 minutes ago) <dependabot[bot]>
+* ccefbca - chore(deps): bump ruint from 1.7.0 to 1.8.0 (#465) (52 minutes ago) <dependabot[bot]>
+* 7c2e0f5 - chore(deps): bump anyhow from 1.0.70 to 1.0.71 (#471) (53 minutes ago) <dependabot[bot]>
+* d7adfd5 - Fix typo in primitives/src/state.rs (#474) (53 minutes ago) <Udoagwa Franklin>
+* d0cd897 - add example to revm crate (#468) (8 days ago) <Sambhav>
+* 08091e1 - fix: compile errors for features (#467) (13 days ago) <rakita>
+
+# v3.2.0
+date: 19.04.2023
+
+consensus bug:
+* fix: touched account on creation (#463) (2 hours ago) <Roman Krasiuk>
+
+# v3.1.1
+date: 14.04.2023
+
+bump revm dependency versions.
+
+# v3.1.0
+date: 04.04.2022
+
+Main changes can be summarizes in:
+* f91d5f9 - refactor: remove gas blocks (#391) (5 weeks ago) <Bjerg>
+    * removal of gas block allowed us to have more compact analysis data. Gas block from beginning didn't have big impact on performance but introduced not intuitive gas calculations that was
+    source of some bugs. 
+* 08ce847 - feat(Shanghai): All EIPs: push0, warm coinbase, limit/measure initcode (#376) (7 weeks ago) <rakita>
+    * revm is Shanghai ready
+* afc3066 - fix(db): preserve existing account state (#414) (4 weeks ago) <Roman Krasiuk>
+    * There wasone  bug inside CacheDB that was here for a long time, and would happen only if
+    selfdestruct/create2 is called in multiple transaction on same account on same cache data.
+* 92f08be - feat: json opcode traces EIP-3155 (#356) (7 weeks ago) <pistomat>
+
+
+Changelogs:
+* 9edb8f4 - (origin/main, origin/HEAD) Improve EthersDB::new (#440) (5 days ago) <lazymio>
+* c2ee8ff - add feature for ignoring base fee check (#436) (6 days ago) <Dan Cline>
+* 6b09caf - chore(deps): bump serde_json from 1.0.94 to 1.0.95 (#434) (6 days ago) <dependabot[bot]>
+* 77f1735 - chore(deps): bump walkdir from 2.3.2 to 2.3.3 (#426) (8 days ago) <dependabot[bot]>
+* ed981c3 - chore(deps): bump serde from 1.0.157 to 1.0.158 (#425) (8 days ago) <dependabot[bot]>
+* 0eff6a7 - Fix panic! message (#431) (2 weeks ago) <David Kulman>
+* 2d5b710 - Comment Fix (#430) (2 weeks ago) <David Kulman>
+* d0038e3 - chore(deps): bump arbitrary from 1.2.3 to 1.3.0 (#428) (2 weeks ago) <dependabot[bot]>
+* d935525 - chore(deps): bump secp256k1 from 0.26.0 to 0.27.0 (#429) (2 weeks ago) <dependabot[bot]>
+* a85ff79 - Update README.md (#424) (2 weeks ago) <Waylon Jepsen>
+* 9645015 - chore(deps): bump thiserror from 1.0.38 to 1.0.40 (#421) (2 weeks ago) <dependabot[bot]>
+* aa6519f - chore(deps): bump enumn from 0.1.6 to 0.1.8 (#422) (2 weeks ago) <dependabot[bot]>
+* d63146f - chore(deps): bump futures from 0.3.26 to 0.3.27 (#416) (2 weeks ago) <dependabot[bot]>
+* 52fe7c4 - chore(deps): bump serde_json from 1.0.93 to 1.0.94 (#401) (2 weeks ago) <dependabot[bot]>
+* b98d9c9 - chore(deps): bump serde from 1.0.152 to 1.0.157 (#423) (2 weeks ago) <dependabot[bot]>
+* 3d8ca66 - feat: add Output::into_data (#420) (3 weeks ago) <Matthias Seitz>
+* afc3066 - fix(db): preserve existing account state (#414) (4 weeks ago) <Roman Krasiuk>
+* dd0e227 - feat: Add all internals results to Halt (#413) (4 weeks ago) <rakita>
+* d8dc652 - fix(interpreter): halt on CreateInitcodeSizeLimit (#412) (4 weeks ago) <Roman Krasiuk>
+* b1208fe - feat: add contract+target to selfdestruct hook (#410) (4 weeks ago) <Matthias Seitz>
+* a193d79 - chore: enabled primtive default feature in precompile (#409) (4 weeks ago) <Matthias Seitz>
+* f2656b7 - chore: add primitive SpecId to precompile SpecId conversion (#408) (4 weeks ago) <Matthias Seitz>
+* 1720729 - chore: add display impl for Opcode (#406) (4 weeks ago) <Matthias Seitz>
+* 33bf8a8 - feat: use singular bytes for the jumpmap (#402) (4 weeks ago) <Bjerg>
+* 394e8e9 - feat: extend SuccessOrHalt (#405) (4 weeks ago) <Matthias Seitz>
+* cff1070 - Update readmdoc of `perf_analyse_created_bytecodes` (#404) (4 weeks ago) <rakita>
+* fbc62a3 - chore: fix typo StorageChange (#403) (4 weeks ago) <Matthias Seitz>
+* 7bb73da - feat: Add check for chainID (#393) (4 weeks ago) <chirag-bgh>
+* 3a17ca8 - feat: add b256<->u256 from impls (#398) (4 weeks ago) <Matthias Seitz>
+* 3789509 - feat: add API to retrieve unpadded bytecode (#397) (5 weeks ago) <Wodann>
+* 5ab154a - chore(deps): bump tokio from 1.25.0 to 1.26.0 (#395) (5 weeks ago) <dependabot[bot]>
+* f91d5f9 - refactor: remove gas blocks (#391) (5 weeks ago) <Bjerg>
+* 8dc024a - Add copyright start year (#387) (5 weeks ago) <Marius Kjærstad>
+* 4d2f074 - feat: add EVM::with_env (#385) (6 weeks ago) <Matthias Seitz>
+* 5efd9d1 - impl NonceTooHigh/ NonceTooLow checks (#383) (6 weeks ago) <gd>
+* 8e6f4f2 - chore: fix compilation if serde not enabled (#381) (7 weeks ago) <rakita>
+* 92f08be - feat: json opcode traces EIP-3155 (#356) (7 weeks ago) <pistomat>
+* ec582a8 - chore(deps): bump once_cell from 1.17.0 to 1.17.1 (#378) (7 weeks ago) <dependabot[bot]>
+* 188dacf - improvement: derive Debug for DatabaseComponentError (#377) (7 weeks ago) <Wodann>
+* 0401cfd - Add B160/B256 From primitive_types traits (#380) (7 weeks ago) <Francesco Cinà>
+* a8ae3f4 - fix: using pop_top instead of pop in eval_exp (#379) (7 weeks ago) <flyq>
+* 08ce847 - feat(Shanghai): All EIPs: push0, warm coinbase, limit/measure initcode (#376) (7 weeks ago) <rakita>
+* 6710511 - add no_std to primitives (#366) (7 weeks ago) <rakita>
+* d5ebdb0 - chore(deps): bump tokio from 1.24.2 to 1.25.0 (#352) (7 weeks ago) <dependabot[bot]>
+* ebaccca - chore(deps): bump futures from 0.3.25 to 0.3.26 (#353) (7 weeks ago) <dependabot[bot]>
+* 5788340 - chore(deps): bump bytes from 1.3.0 to 1.4.0 (#355) (7 weeks ago) <dependabot[bot]>
+* d3fba88 - chore(deps): bump serde_json from 1.0.92 to 1.0.93 (#365) (7 weeks ago) <dependabot[bot]>
+* e22c3f3 - fix: call create_end for all code paths (#362) (7 weeks ago) <Wodann>
+* b4c62e9 - chore: rename Then to Than (#368) (7 weeks ago) <Matthias Seitz>
+* 1c3e9e3 - improvement: use alloc & core for Arc impl (#367) (8 weeks ago) <Wodann>
+* 3158ce9 - feat: implement Debug for DatabaseComponentError if supported (#363) (8 weeks ago) <Wodann>
+* d9727c2 - improvement: add error details to InvalidTransaction::LackOfFundForGasLimit (#364) (8 weeks ago) <Wodann>
+* 6b170b4 - Use gas price in place of effective gas price for initial balance check (#359) (8 weeks ago) <gd>
+* 5d6ecd0 - improvement: implement BlockHash for Arc<BlockHashRef> (#361) (8 weeks ago) <Wodann>
+* ae9baba - improvement: implement State for Arc<StateRef> (#360) (8 weeks ago) <Wodann>
+* 2e4e800 - chore(deps): bump serde_json from 1.0.91 to 1.0.92 (#357) (8 weeks ago) <dependabot[bot]>
+* 1fca102 - chore(deps): bump proptest from 1.0.0 to 1.1.0 (#358) (8 weeks ago) <dependabot[bot]>
+* 9b663bb - feat: Different OutOfGas Error types (#354) (9 weeks ago) <Chirag Baghasingh>
+* 10187ed - data change (9 weeks ago) <rakita>
+
+# v3.0.0
+date 29.01.2022
+
+This is big release that has core changes that breaks compatibility. In summary:
+*  Project is refactored into `revm-primitives`,`revm-precompile`,`revm-interpreter` and `revm` to have more flexibility and separation of concerns. And include paths in revm reflect that. So try to find include as `revm::primitives` or `revm::interpreter`
+* Parity `primitive-types` was replaced with `ruint` for big numbers and subset of macros are used for native `B160`/`B256` types. 
+* Interpreter instructions are unified and now all of them have same signature.
+* web3 db was replaces with ethers alternative.
+* revmjs lib was removed from crates.
+* `revm_precompiles` was renamed to `revm-precompile.`
+
+* Return types are made to have more insight of what have happened inside revm.
+* Snailtracer benchmark got around 20% faster.
+
+Github Changelog:
+* dc9818f - (HEAD -> o/bump, origin/bump_v20) Bump v20 (13 hours ago) <rakita>
+* 75ef0f1 - (origin/main, origin/HEAD) feat: Staticcall internal return (#349) (13 hours ago) <rakita>
+* 0194b37 - (t) fix bug introduced in last commit (13 hours ago) <rakita>
+* 7b00f32 - Cleanup imports (#348) (14 hours ago) <rakita>
+* c14d7ea - fix: enable the examples to run with the current revm (#347) (16 hours ago) <flyq>
+* 329fd94 - Wrap all calls to interpreter.gas.erase_cost with checks if USE_GAS is enabled (#346) (2 days ago) <christn>
+* 72355f4 - improvement: add logs & return value to revert (#343) (3 days ago) <Wodann>
+* 142a1c9 - expose hashbrown::HashMap in primitives (#345) (3 days ago) <Andy Thomson>
+* ba393d7 - fix: disable balance check (#342) (4 days ago) <Wodann>
+* 876fad1 - refactor: simplify DatabaseComponentError (#339) (6 days ago) <Wodann>
+* 81534ad - chore: includes to libs (#338) (7 days ago) <rakita>
+* e2f4d32 - Creating revm-primitives, revm better errors and db components  (#334) (10 days ago) <rakita>
+* de83db6 - fix: feature flags (#330) (2 weeks ago) <Wodann>
+* b60269c - `revm`: mark `with-serde` feature as deprecated (#328) (2 weeks ago) <Enrique Ortiz>
+* 63bf475 - make load_account pub (#325) (3 weeks ago) <rakita>
+* 0ef0197 - Cleanup, move hot fields toggether in Interpreter (#321) (3 weeks ago) <rakita>
+* 81942d6 - enable proptest with arbitrary feature (#323) (3 weeks ago) <joshieDo>
+* 2be3798 - feat: revm-interpreter created (#320) (3 weeks ago) <rakita>
+* 7e98fef - fix: feature flag compiler errors (#256) (5 weeks ago) <Wodann>
+* 488ef8a - Add example for fork + ref_transact impl (#296) (6 weeks ago) <0xDmtri>
+* 56e6c22 - feat: allow disabling of balance checks (#297) (6 weeks ago) <Wodann>
+* 8661467 - feat: Export CustomPrinter insector from revm (#300) (6 weeks ago) <rakita>
+* 222b8e9 - feature: substitute web3db to ethersdb (#293) (6 weeks ago) <0xDmtri>
+* fd01083 - feature(revm): Return `bytes` in Create calls (#289) (7 weeks ago) <Nicolas Gotchac>
+* 2fb0933 - docs: Correct typo (#282) (7 weeks ago) <Przemyslaw Rzad>
+* 90fe01e - feat(interpreter): Unify instruction fn signature (#283) (7 weeks ago) <rakita>
+* 54e0333 - bug: Integer overflow while calculating the remaining gas in GasInspector (#287) (8 weeks ago) <rakita>
+* acdbaac - native bits (#278) (8 weeks ago) <rakita>
+* 69e302b - feat(revm): Add prevrandao field to EnvBlock (#271) (2 months ago) <rakita>
+* d1703cd - Export StorageSlot (#265) (3 months ago) <Francesco Cinà>
+* 560bb03 - Fix: typos (#263) (3 months ago) <HAPPY>
+* 369244e - feat(refactor): make keccak in one place. (#247) (3 months ago) <rakita>
+* c96c878 - feat: Migrate `primitive_types::U256` to `ruint::Uint<256, 4>` (#239) (3 months ago) <Alexey Shekhirin>
+
+
 # v2.3.1
 date: 22.11.2022
 
