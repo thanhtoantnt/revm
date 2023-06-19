@@ -1,6 +1,6 @@
 use crate::{gas, interpreter::Interpreter, primitives::U256, Host, InstructionResult};
 
-pub fn mload(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn mload<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     pop!(interpreter, index);
     let index = as_usize_or_fail!(interpreter, index, InstructionResult::InvalidOperandOOG);
@@ -13,7 +13,7 @@ pub fn mload(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     );
 }
 
-pub fn mstore(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn mstore<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     pop!(interpreter, index, value);
     let index = as_usize_or_fail!(interpreter, index, InstructionResult::InvalidOperandOOG);
@@ -21,7 +21,7 @@ pub fn mstore(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     interpreter.memory.set_u256(index, value);
 }
 
-pub fn mstore8(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn mstore8<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     pop!(interpreter, index, value);
     let index = as_usize_or_fail!(interpreter, index, InstructionResult::InvalidOperandOOG);
@@ -31,7 +31,7 @@ pub fn mstore8(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     unsafe { interpreter.memory.set_byte(index, value) }
 }
 
-pub fn msize(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn msize<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::BASE);
     push!(interpreter, U256::from(interpreter.memory.effective_len()));
 }

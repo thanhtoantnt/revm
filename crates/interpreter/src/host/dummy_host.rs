@@ -1,9 +1,7 @@
 use crate::primitives::{hash_map::Entry, Bytecode, Bytes, HashMap, U256};
-use crate::{
-    primitives::{Env, Log, B160, B256, KECCAK_EMPTY},
-    CallInputs, CreateInputs, Gas, Host, InstructionResult, Interpreter, SelfDestructResult,
-};
+use crate::{primitives::{Env, Log, B160, B256, KECCAK_EMPTY}, CallInputs, CreateInputs, Gas, Host, InstructionResult, Interpreter, SelfDestructResult, BytecodeLocked};
 use alloc::vec::Vec;
+use std::sync::Arc;
 
 pub struct DummyHost {
     pub env: Env,
@@ -25,8 +23,8 @@ impl DummyHost {
     }
 }
 
-impl Host for DummyHost {
-    fn step(&mut self, _interp: &mut Interpreter) -> InstructionResult {
+impl Host<u32> for DummyHost {
+    fn step(&mut self, _interp: &mut Interpreter, _: &mut u32) -> InstructionResult {
         InstructionResult::Continue
     }
 
@@ -34,6 +32,7 @@ impl Host for DummyHost {
         &mut self,
         _interp: &mut Interpreter,
         _ret: InstructionResult,
+        _: &mut u32
     ) -> InstructionResult {
         InstructionResult::Continue
     }
@@ -54,8 +53,8 @@ impl Host for DummyHost {
         Some((U256::ZERO, false))
     }
 
-    fn code(&mut self, _address: B160) -> Option<(Bytecode, bool)> {
-        Some((Bytecode::default(), false))
+    fn code(&mut self, _address: B160) -> Option<(Arc<BytecodeLocked>, bool)> {
+        Some((Arc::new(BytecodeLocked::default()), false))
     }
 
     fn code_hash(&mut self, __address: B160) -> Option<(B256, bool)> {
@@ -104,11 +103,12 @@ impl Host for DummyHost {
     fn create(
         &mut self,
         _inputs: &mut CreateInputs,
+        _: &mut u32,
     ) -> (InstructionResult, Option<B160>, Gas, Bytes) {
         panic!("Create is not supported for this host")
     }
 
-    fn call(&mut self, _input: &mut CallInputs) -> (InstructionResult, Gas, Bytes) {
+    fn call(&mut self, _input: &mut CallInputs, _: &mut u32) -> (InstructionResult, Gas, Bytes) {
         panic!("Call is not supported for this host")
     }
 }

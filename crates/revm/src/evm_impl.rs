@@ -14,8 +14,9 @@ use crate::primitives::{
 use crate::{db::Database, journaled_state::JournaledState, precompile, Inspector};
 use alloc::vec::Vec;
 use core::{cmp::min, marker::PhantomData};
+use std::sync::Arc;
 use revm_interpreter::gas::initial_tx_gas;
-use revm_interpreter::MAX_CODE_SIZE;
+use revm_interpreter::{BytecodeLocked, MAX_CODE_SIZE};
 use revm_precompile::{Precompile, Precompiles};
 
 pub struct EVMData<'a, DB: Database> {
@@ -133,7 +134,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                         scheme: CallScheme::Call,
                     },
                     is_static: false,
-                });
+                }, &mut 0
+                );
                 (exit, gas, Output::Call(bytes))
             }
             TransactTo::Create(scheme) => {
@@ -143,7 +145,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                     value: tx_value,
                     init_code: tx_data,
                     gas_limit: transact_gas_limit,
-                });
+                }, &mut 0);
                 (exit, ret_gas, Output::Create(bytes, address))
             }
         };
@@ -453,9 +455,9 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 .initialize_interp(&mut interpreter, &mut self.data);
         }
         let exit_reason = if INSPECT {
-            interpreter.run_inspect::<Self, GSPEC>(self)
+            interpreter.run_inspect::<u32, Self, GSPEC>(self, &mut 0)
         } else {
-            interpreter.run::<Self, GSPEC>(self)
+            interpreter.run::<u32, Self, GSPEC>(self, &mut 0)
         };
 
         (exit_reason, interpreter)
@@ -533,7 +535,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         } else if !bytecode.is_empty() {
             // Create interpreter and execute subcall
             let (exit_reason, interpreter) = self.run_interpreter(
-                Contract::new_with_context(inputs.input.clone(), bytecode, &inputs.context),
+                Contract::new_with_context_analyzed(inputs.input.clone(), bytecode, &inputs.context),
                 gas.limit(),
                 inputs.is_static,
             );
@@ -553,14 +555,14 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
     }
 }
 
-impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
+impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
     for EVMImpl<'a, GSPEC, DB, INSPECT>
 {
-    fn step(&mut self, interp: &mut Interpreter) -> InstructionResult {
+    fn step(&mut self, interp: &mut Interpreter, _: &mut u32) -> InstructionResult {
         self.inspector.step(interp, &mut self.data)
     }
 
-    fn step_end(&mut self, interp: &mut Interpreter, ret: InstructionResult) -> InstructionResult {
+    fn step_end(&mut self, interp: &mut Interpreter, ret: InstructionResult, _: &mut u32) -> InstructionResult {
         self.inspector.step_end(interp, &mut self.data, ret)
     }
 
@@ -595,7 +597,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
             .map(|(acc, is_cold)| (acc.info.balance, is_cold))
     }
 
-    fn code(&mut self, address: B160) -> Option<(Bytecode, bool)> {
+    fn code(&mut self, address: B160) -> Option<(Arc<BytecodeLocked>, bool)> {
         let journal = &mut self.data.journaled_state;
         let db = &mut self.data.db;
         let error = &mut self.data.error;
@@ -604,7 +606,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
             .load_code(address, db)
             .map_err(|e| *error = Some(e))
             .ok()?;
-        Some((acc.info.code.clone().unwrap(), is_cold))
+        Some((Arc::new(BytecodeLocked::default()), is_cold))
     }
 
     /// Get code hash of address.
@@ -673,6 +675,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
     fn create(
         &mut self,
         inputs: &mut CreateInputs,
+        _: &mut u32
     ) -> (InstructionResult, Option<B160>, Gas, Bytes) {
         // Call inspector
         if INSPECT {
@@ -690,7 +693,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
         }
     }
 
-    fn call(&mut self, inputs: &mut CallInputs) -> (InstructionResult, Gas, Bytes) {
+    fn call(&mut self, inputs: &mut CallInputs, _: &mut u32) -> (InstructionResult, Gas, Bytes) {
         if INSPECT {
             let (ret, gas, out) = self.inspector.call(&mut self.data, inputs);
             if ret != InstructionResult::Continue {

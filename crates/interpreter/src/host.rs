@@ -1,20 +1,19 @@
 mod dummy_host;
 
 use crate::primitives::Bytecode;
-use crate::{
-    primitives::{Bytes, Env, B160, B256, U256},
-    CallInputs, CreateInputs, Gas, InstructionResult, Interpreter, SelfDestructResult,
-};
+use crate::{primitives::{Bytes, Env, B160, B256, U256}, CallInputs, CreateInputs, Gas, InstructionResult, Interpreter, SelfDestructResult, BytecodeLocked};
 pub use alloc::vec::Vec;
+use std::sync::Arc;
 pub use dummy_host::DummyHost;
 
 /// EVM context host.
-pub trait Host {
-    fn step(&mut self, interpreter: &mut Interpreter) -> InstructionResult;
+pub trait Host<T> {
+    fn step(&mut self, interpreter: &mut Interpreter, additional_data: &mut T) -> InstructionResult;
     fn step_end(
         &mut self,
         interpreter: &mut Interpreter,
         ret: InstructionResult,
+        additional_data: &mut T
     ) -> InstructionResult;
 
     fn env(&mut self) -> &mut Env;
@@ -26,7 +25,7 @@ pub trait Host {
     /// Get balance of address and if account is cold loaded.
     fn balance(&mut self, address: B160) -> Option<(U256, bool)>;
     /// Get code of address and if account is cold loaded.
-    fn code(&mut self, address: B160) -> Option<(Bytecode, bool)>;
+    fn code(&mut self, address: B160) -> Option<(Arc<BytecodeLocked>, bool)>;
     /// Get code hash of address and if account is cold loaded.
     fn code_hash(&mut self, address: B160) -> Option<(B256, bool)>;
     /// Get storage value of address at index and if account is cold loaded.
@@ -47,7 +46,8 @@ pub trait Host {
     fn create(
         &mut self,
         inputs: &mut CreateInputs,
+        additional_data: &mut T
     ) -> (InstructionResult, Option<B160>, Gas, Bytes);
     /// Invoke a call operation.
-    fn call(&mut self, input: &mut CallInputs) -> (InstructionResult, Gas, Bytes);
+    fn call(&mut self, input: &mut CallInputs, additional_data: &mut T) -> (InstructionResult, Gas, Bytes);
 }

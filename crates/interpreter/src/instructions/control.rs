@@ -3,7 +3,7 @@ use crate::{
     InstructionResult,
 };
 
-pub fn jump(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn jump<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::MID);
     pop!(interpreter, dest);
     let dest = as_usize_or_fail!(interpreter, dest, InstructionResult::InvalidJump);
@@ -17,7 +17,7 @@ pub fn jump(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     }
 }
 
-pub fn jumpi(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn jumpi<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::HIGH);
     pop!(interpreter, dest, value);
     if value != U256::ZERO {
@@ -33,16 +33,16 @@ pub fn jumpi(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     }
 }
 
-pub fn jumpdest(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn jumpdest<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::JUMPDEST);
 }
 
-pub fn pc(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn pc<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::BASE);
     push!(interpreter, U256::from(interpreter.program_counter() - 1));
 }
 
-pub fn ret(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn ret<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     // zero gas cost gas!(interp,gas::ZERO);
     pop!(interpreter, start, len);
     let len = as_usize_or_fail!(interpreter, len, InstructionResult::InvalidOperandOOG);
@@ -56,7 +56,7 @@ pub fn ret(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     interpreter.instruction_result = InstructionResult::Return;
 }
 
-pub fn revert<SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn revert<T, SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     // zero gas cost gas!(interp,gas::ZERO);
     // EIP-140: REVERT instruction
     check!(interpreter, SPEC::enabled(BYZANTIUM));

@@ -127,36 +127,36 @@ impl Interpreter {
 
     /// Execute next instruction
     #[inline(always)]
-    pub fn step<H: Host, SPEC: Spec>(&mut self, host: &mut H) {
+    pub fn step<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) {
         // step.
         let opcode = unsafe { *self.instruction_pointer };
         // Safety: In analysis we are doing padding of bytecode so that we are sure that last
         // byte instruction is STOP so we are safe to just increment program_counter bcs on last instruction
         // it will do noop and just stop execution of this contract
         self.instruction_pointer = unsafe { self.instruction_pointer.offset(1) };
-        eval::<H, SPEC>(opcode, self, host);
+        eval::<T, H, SPEC>(opcode, self, host, additional_data);
     }
 
     /// loop steps until we are finished with execution
-    pub fn run<H: Host, SPEC: Spec>(&mut self, host: &mut H) -> InstructionResult {
+    pub fn run<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) -> InstructionResult {
         while self.instruction_result == InstructionResult::Continue {
-            self.step::<H, SPEC>(host)
+            self.step::<T, H, SPEC>(host, additional_data);
         }
         self.instruction_result
     }
 
     /// loop steps until we are finished with execution
-    pub fn run_inspect<H: Host, SPEC: Spec>(&mut self, host: &mut H) -> InstructionResult {
+    pub fn run_inspect<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) -> InstructionResult {
         while self.instruction_result == InstructionResult::Continue {
             // step
-            let ret = host.step(self);
+            let ret = host.step(self, additional_data);
             if ret != InstructionResult::Continue {
                 return ret;
             }
-            self.step::<H, SPEC>(host);
+            self.step::<T, H, SPEC>(host, additional_data);
 
             // step ends
-            let ret = host.step_end(self, self.instruction_result);
+            let ret = host.step_end(self, self.instruction_result, additional_data);
             if ret != InstructionResult::Continue {
                 return ret;
             }

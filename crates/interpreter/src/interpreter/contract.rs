@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::analysis::{to_analysed, BytecodeLocked};
 use crate::primitives::{Bytecode, Bytes, B160, U256};
 use crate::CallContext;
@@ -9,7 +10,7 @@ pub struct Contract {
     pub input: Bytes,
     /// Bytecode contains contract code, size of original code, analysis with gas block and jump table.
     /// Note that current code is extended with push padding and STOP at end.
-    pub bytecode: BytecodeLocked,
+    pub bytecode: Arc<BytecodeLocked>,
     /// Contract address
     pub address: B160,
     /// Caller of the EVM.
@@ -20,7 +21,7 @@ pub struct Contract {
 
 impl Contract {
     pub fn new(input: Bytes, bytecode: Bytecode, address: B160, caller: B160, value: U256) -> Self {
-        let bytecode = to_analysed(bytecode).try_into().expect("it is analyzed");
+        let bytecode = Arc::new(to_analysed(bytecode).try_into().expect("it is analyzed"));
 
         Self {
             input,
@@ -58,5 +59,16 @@ impl Contract {
             call_context.caller,
             call_context.apparent_value,
         )
+    }
+
+
+    pub fn new_with_context_analyzed(input: Bytes, bytecode: Arc<BytecodeLocked>, call_context: &CallContext) -> Self {
+        Self {
+            input,
+            bytecode,
+            address: call_context.address,
+            caller: call_context.caller,
+            value: call_context.apparent_value,
+        }
     }
 }

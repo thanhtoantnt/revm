@@ -4,7 +4,7 @@ use revm_primitives::{Spec, SpecId::SHANGHAI, U256};
 
 use crate::{interpreter::Interpreter, Host};
 
-pub fn pop(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn pop<T>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::BASE);
     if let Some(ret) = interpreter.stack.reduce_one() {
         interpreter.instruction_result = ret;
@@ -13,7 +13,7 @@ pub fn pop(interpreter: &mut Interpreter, _host: &mut dyn Host) {
 
 /// EIP-3855: PUSH0 instruction  
 /// Introduce a new instruction which pushes the constant value 0 onto the stack
-pub fn push0<SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn push0<T, SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     // EIP-3855: PUSH0 instruction
     check!(interpreter, SPEC::enabled(SHANGHAI));
     gas!(interpreter, gas::BASE);
@@ -22,7 +22,7 @@ pub fn push0<SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
     }
 }
 
-pub fn push<const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn push<T, const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     let start = interpreter.instruction_pointer;
     // Safety: In Analysis we appended needed bytes for bytecode so that we are safe to just add without
@@ -37,14 +37,14 @@ pub fn push<const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host)
     interpreter.instruction_pointer = unsafe { interpreter.instruction_pointer.add(N) };
 }
 
-pub fn dup<const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn dup<T, const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     if let Some(ret) = interpreter.stack.dup::<N>() {
         interpreter.instruction_result = ret;
     }
 }
 
-pub fn swap<const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host) {
+pub fn swap<T, const N: usize>(interpreter: &mut Interpreter, _host: &mut dyn Host<T>) {
     gas!(interpreter, gas::VERYLOW);
     if let Some(ret) = interpreter.stack.swap::<N>() {
         interpreter.instruction_result = ret;

@@ -9,7 +9,7 @@ use crate::{
 };
 use core::cmp::min;
 
-pub fn balance<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn balance<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     pop_address!(interpreter, address);
     let ret = host.balance(address);
     if ret.is_none() {
@@ -31,7 +31,7 @@ pub fn balance<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
     push!(interpreter, balance);
 }
 
-pub fn selfbalance<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn selfbalance<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     // EIP-1884: Repricing for trie-size-dependent opcodes
     check!(interpreter, SPEC::enabled(ISTANBUL));
     gas!(interpreter, gas::LOW);
@@ -44,7 +44,7 @@ pub fn selfbalance<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Hos
     push!(interpreter, balance);
 }
 
-pub fn extcodesize<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn extcodesize<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     pop_address!(interpreter, address);
     let ret = host.code(address);
     if ret.is_none() {
@@ -70,7 +70,7 @@ pub fn extcodesize<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Hos
     push!(interpreter, U256::from(code.len()));
 }
 
-pub fn extcodehash<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn extcodehash<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     check!(interpreter, SPEC::enabled(CONSTANTINOPLE)); // EIP-1052: EXTCODEHASH opcode
     pop_address!(interpreter, address);
     let ret = host.code_hash(address);
@@ -96,7 +96,7 @@ pub fn extcodehash<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Hos
     push_b256!(interpreter, code_hash);
 }
 
-pub fn extcodecopy<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn extcodecopy<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     pop_address!(interpreter, address);
     pop!(interpreter, memory_offset, code_offset, len_u256);
 
@@ -126,10 +126,10 @@ pub fn extcodecopy<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Hos
     // Safety: set_data is unsafe function and memory_resize ensures us that it is safe to call it
     interpreter
         .memory
-        .set_data(memory_offset, code_offset, len, code.bytes());
+        .set_data(memory_offset, code_offset, len, code.bytecode());
 }
 
-pub fn blockhash(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn blockhash<T>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     gas!(interpreter, gas::BLOCKHASH);
     pop_top!(interpreter, number);
 
@@ -149,7 +149,7 @@ pub fn blockhash(interpreter: &mut Interpreter, host: &mut dyn Host) {
     *number = U256::ZERO;
 }
 
-pub fn sload<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn sload<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     pop!(interpreter, index);
 
     let ret = host.sload(interpreter.contract.address, index);
@@ -162,7 +162,7 @@ pub fn sload<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
     push!(interpreter, value);
 }
 
-pub fn sstore<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn sstore<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     check_staticcall!(interpreter);
 
     pop!(interpreter, index, value);
@@ -179,7 +179,7 @@ pub fn sstore<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
     refund!(interpreter, gas::sstore_refund::<SPEC>(original, old, new));
 }
 
-pub fn log<const N: u8>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn log<T, const N: u8>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     check_staticcall!(interpreter);
 
     pop!(interpreter, offset, len);
@@ -209,7 +209,7 @@ pub fn log<const N: u8>(interpreter: &mut Interpreter, host: &mut dyn Host) {
     host.log(interpreter.contract.address, topics, data);
 }
 
-pub fn selfdestruct<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
+pub fn selfdestruct<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>) {
     check_staticcall!(interpreter);
     pop_address!(interpreter, target);
 
@@ -229,9 +229,10 @@ pub fn selfdestruct<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Ho
     interpreter.instruction_result = InstructionResult::SelfDestruct;
 }
 
-pub fn create<const IS_CREATE2: bool, SPEC: Spec>(
+pub fn create<T, const IS_CREATE2: bool, SPEC: Spec>(
     interpreter: &mut Interpreter,
-    host: &mut dyn Host,
+    host: &mut dyn Host<T>,
+    additional_data: &mut T
 ) {
     check_staticcall!(interpreter);
     if IS_CREATE2 {
@@ -290,7 +291,7 @@ pub fn create<const IS_CREATE2: bool, SPEC: Spec>(
         gas_limit,
     };
 
-    let (return_reason, address, gas, return_data) = host.create(&mut create_input);
+    let (return_reason, address, gas, return_data) = host.create(&mut create_input, additional_data);
     interpreter.return_data_buffer = match return_reason {
         // Save data to return data buffer if the create reverted
         return_revert!() => return_data,
@@ -321,26 +322,27 @@ pub fn create<const IS_CREATE2: bool, SPEC: Spec>(
     }
 }
 
-pub fn call<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
-    call_inner::<SPEC>(interpreter, CallScheme::Call, host);
+pub fn call<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>, additional_data: &mut T) {
+    call_inner::<T, SPEC>(interpreter, CallScheme::Call, host, additional_data);
 }
 
-pub fn call_code<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
-    call_inner::<SPEC>(interpreter, CallScheme::CallCode, host);
+pub fn call_code<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>, additional_data: &mut T) {
+    call_inner::<T, SPEC>(interpreter, CallScheme::CallCode, host, additional_data);
 }
 
-pub fn delegate_call<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
-    call_inner::<SPEC>(interpreter, CallScheme::DelegateCall, host);
+pub fn delegate_call<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>, additional_data: &mut T) {
+    call_inner::<T, SPEC>(interpreter, CallScheme::DelegateCall, host, additional_data);
 }
 
-pub fn static_call<SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host) {
-    call_inner::<SPEC>(interpreter, CallScheme::StaticCall, host);
+pub fn static_call<T, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut dyn Host<T>, additional_data: &mut T) {
+    call_inner::<T, SPEC>(interpreter, CallScheme::StaticCall, host, additional_data);
 }
 
-pub fn call_inner<SPEC: Spec>(
+pub fn call_inner<T, SPEC: Spec>(
     interpreter: &mut Interpreter,
     scheme: CallScheme,
-    host: &mut dyn Host,
+    host: &mut dyn Host<T>,
+    additional_data: &mut T
 ) {
     match scheme {
         CallScheme::DelegateCall => check!(interpreter, SPEC::enabled(HOMESTEAD)), // EIP-7: DELEGATECALL
@@ -486,7 +488,7 @@ pub fn call_inner<SPEC: Spec>(
     };
 
     // Call host to interuct with target contract
-    let (reason, gas, return_data) = host.call(&mut call_input);
+    let (reason, gas, return_data) = host.call(&mut call_input, additional_data);
 
     interpreter.return_data_buffer = return_data;
 
