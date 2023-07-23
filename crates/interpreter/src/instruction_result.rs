@@ -43,6 +43,11 @@ pub enum InstructionResult {
 
     // Fatal external error. Returned by database.
     FatalExternalError,
+
+    // ItyFuzz specific error codes
+    ControlLeak,
+    ArbitraryExternalCallAddressBounded,
+    ArbitraryExternalCallAddressUnbounded,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -136,6 +141,9 @@ impl From<InstructionResult> for SuccessOrHalt {
             }
             InstructionResult::CreateInitcodeSizeLimit => Self::Halt(Halt::CreateInitcodeSizeLimit),
             InstructionResult::FatalExternalError => Self::FatalExternalError,
+            InstructionResult::ControlLeak => Self::FatalExternalError,
+            InstructionResult::ArbitraryExternalCallAddressBounded => Self::FatalExternalError,
+            InstructionResult::ArbitraryExternalCallAddressUnbounded => Self::FatalExternalError,
         }
     }
 }
