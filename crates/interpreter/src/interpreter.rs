@@ -149,17 +149,8 @@ impl Interpreter {
     pub fn run_inspect<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) -> InstructionResult {
         while self.instruction_result == InstructionResult::Continue {
             // step
-            let ret = host.step(self, additional_data);
-            if ret != InstructionResult::Continue {
-                return ret;
-            }
+            host.step(self, additional_data);
             self.step::<T, H, SPEC>(host, additional_data);
-
-            // step ends
-            let ret = host.step_end(self, self.instruction_result, additional_data);
-            if ret != InstructionResult::Continue {
-                return ret;
-            }
         }
         self.instruction_result
     }
