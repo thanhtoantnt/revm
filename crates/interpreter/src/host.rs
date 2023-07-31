@@ -49,5 +49,5 @@ pub trait Host<T> {
         additional_data: &mut T
     ) -> (InstructionResult, Option<B160>, Gas, Bytes);
     /// Invoke a call operation.
-    fn call(&mut self, input: &mut CallInputs, additional_data: &mut T) -> (InstructionResult, Gas, Bytes);
+    fn call(&mut self, input: &mut CallInputs, interp: &mut Interpreter, output_info: (usize, usize), additional_data: &mut T) -> (InstructionResult, Gas, Bytes);
 }

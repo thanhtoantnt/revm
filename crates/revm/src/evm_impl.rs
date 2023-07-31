@@ -134,7 +134,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                         scheme: CallScheme::Call,
                     },
                     is_static: false,
-                }, &mut 0
+                },&mut Interpreter::new(Contract::default(), 0, false),  (0,0),&mut 0
                 );
                 (exit, gas, Output::Call(bytes))
             }
@@ -346,6 +346,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
             Contract::new(
                 Bytes::new(),
                 Bytecode::new_raw(inputs.init_code.clone()),
+                created_address,
                 created_address,
                 inputs.caller,
                 inputs.value,
@@ -693,7 +694,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
         }
     }
 
-    fn call(&mut self, inputs: &mut CallInputs, _: &mut u32) -> (InstructionResult, Gas, Bytes) {
+    fn call(&mut self, inputs: &mut CallInputs, _: &mut Interpreter, output_info: (usize, usize), _: &mut u32) -> (InstructionResult, Gas, Bytes) {
         if INSPECT {
             let (ret, gas, out) = self.inspector.call(&mut self.data, inputs);
             if ret != InstructionResult::Continue {
