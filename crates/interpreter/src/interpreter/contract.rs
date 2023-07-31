@@ -17,14 +17,17 @@ pub struct Contract {
     pub caller: B160,
     /// Value send to contract.
     pub value: U256,
+
+    pub code_address: B160,
 }
 
 impl Contract {
-    pub fn new(input: Bytes, bytecode: Bytecode, address: B160, caller: B160, value: U256) -> Self {
+    pub fn new(input: Bytes, bytecode: Bytecode, address: B160, code_address: B160, caller: B160, value: U256) -> Self {
         let bytecode = Arc::new(to_analysed(bytecode).try_into().expect("it is analyzed"));
 
         Self {
             input,
+            code_address,
             bytecode,
             address,
             caller,
@@ -32,20 +35,6 @@ impl Contract {
         }
     }
 
-    /// Create new contract from environment
-    pub fn new_env(env: &Env, bytecode: Bytecode) -> Self {
-        let contract_address = match env.tx.transact_to {
-            TransactTo::Call(caller) => caller,
-            TransactTo::Create(..) => B160::zero(),
-        };
-        Self::new(
-            env.tx.data.clone(),
-            bytecode,
-            contract_address,
-            env.tx.caller,
-            env.tx.value,
-        )
-    }
 
     pub fn is_valid_jump(&self, possition: usize) -> bool {
         self.bytecode.jump_map().is_valid(possition)
@@ -56,6 +45,7 @@ impl Contract {
             input,
             bytecode,
             call_context.address,
+            call_context.code_address,
             call_context.caller,
             call_context.apparent_value,
         )
@@ -66,6 +56,7 @@ impl Contract {
         Self {
             input,
             bytecode,
+            code_address: call_context.code_address,
             address: call_context.address,
             caller: call_context.caller,
             value: call_context.apparent_value,

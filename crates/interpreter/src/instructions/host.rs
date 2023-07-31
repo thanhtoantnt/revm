@@ -488,7 +488,8 @@ pub fn call_inner<T, SPEC: Spec>(
     };
 
     // Call host to interuct with target contract
-    let (reason, gas, return_data) = host.call(&mut call_input, additional_data);
+    let (reason, gas, return_data) = host.call(
+        &mut call_input, interpreter, (out_offset, out_len), additional_data);
 
     interpreter.return_data_buffer = return_data;
 

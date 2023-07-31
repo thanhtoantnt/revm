@@ -108,7 +108,7 @@ impl Host<u32> for DummyHost {
         panic!("Create is not supported for this host")
     }
 
-    fn call(&mut self, _input: &mut CallInputs, _: &mut u32) -> (InstructionResult, Gas, Bytes) {
+    fn call(&mut self, _input: &mut CallInputs, _: &mut Interpreter, output_info: (usize, usize), _: &mut u32) -> (InstructionResult, Gas, Bytes) {
         panic!("Call is not supported for this host")
     }
 }
