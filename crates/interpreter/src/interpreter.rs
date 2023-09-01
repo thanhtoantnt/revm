@@ -18,6 +18,11 @@ use core::ops::Range;
 pub const STACK_LIMIT: u64 = 1024;
 pub const CALL_STACK_LIMIT: u64 = 1024;
 
+// This is a carefully considered value. Eg. very complex tx:
+// https://bscscan.com/tx/0xae8ca9dc8258ae32899fe641985739c3fa53ab1f603973ac74b424e165c66ccf whose instruction count is 4_752_748
+// https://bscscan.com/tx/0x3b472f87431a52082bae7d8524b4e0af3cf930a105646259e1249f2218525607 whose instruction count is 2_230_341
+pub const MAX_INSTRUCTION_SIZE: usize = 8_000_000;
+
 /// EIP-170: Contract code size limit
 /// By default limit is 0x6000 (~25kb)
 pub const MAX_CODE_SIZE: usize = 0x6000;
@@ -138,7 +143,11 @@ impl Interpreter {
     }
 
     /// loop steps until we are finished with execution
-    pub fn run<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) -> InstructionResult {
+    pub fn run<T, H: Host<T>, SPEC: Spec>(
+        &mut self,
+        host: &mut H,
+        additional_data: &mut T,
+    ) -> InstructionResult {
         while self.instruction_result == InstructionResult::Continue {
             self.step::<T, H, SPEC>(host, additional_data);
         }
@@ -146,11 +155,18 @@ impl Interpreter {
     }
 
     /// loop steps until we are finished with execution
-    pub fn run_inspect<T, H: Host<T>, SPEC: Spec>(&mut self, host: &mut H, additional_data: &mut T) -> InstructionResult {
-        while self.instruction_result == InstructionResult::Continue {
-            // step
-            host.step(self, additional_data);
-            self.step::<T, H, SPEC>(host, additional_data);
+    pub fn run_inspect<T, H: Host<T>, SPEC: Spec>(
+        &mut self,
+        host: &mut H,
+        additional_data: &mut T,
+    ) -> InstructionResult {
+        for _count in 0..MAX_INSTRUCTION_SIZE {
+            if self.instruction_result == InstructionResult::Continue {
+                host.step(self, additional_data);
+                self.step::<T, H, SPEC>(host, additional_data);
+            } else {
+                break;
+            }
         }
         self.instruction_result
     }
