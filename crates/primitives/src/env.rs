@@ -95,6 +95,7 @@ pub struct CfgEnv {
     /// a sane value to prevent memory allocation panics. Defaults to `2^32 - 1` bytes per
     /// EIP-1985.
     #[cfg(feature = "memory_limit")]
+    #[serde(skip)]
     pub memory_limit: u64,
     /// Skip balance checks if true. Adds transaction cost to balance to ensure execution doesn't fail.
     #[cfg(feature = "optional_balance_check")]
