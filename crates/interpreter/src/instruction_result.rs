@@ -1,4 +1,4 @@
-use revm_primitives::{B160, Eval, Halt};
+use revm_primitives::{B160, Eval, Halt, U256};
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -46,7 +46,7 @@ pub enum InstructionResult {
 
     // ItyFuzz specific error codes
     ControlLeak,
-    ArbitraryExternalCallAddressBounded(B160, B160),
+    ArbitraryExternalCallAddressBounded(B160, B160, U256),
     ArbitraryExternalCallAddressUnbounded,
 }
 
@@ -142,7 +142,7 @@ impl From<InstructionResult> for SuccessOrHalt {
             InstructionResult::CreateInitcodeSizeLimit => Self::Halt(Halt::CreateInitcodeSizeLimit),
             InstructionResult::FatalExternalError => Self::FatalExternalError,
             InstructionResult::ControlLeak => Self::FatalExternalError,
-            InstructionResult::ArbitraryExternalCallAddressBounded(_, _) => Self::FatalExternalError,
+            InstructionResult::ArbitraryExternalCallAddressBounded(_, _, _) => Self::FatalExternalError,
             InstructionResult::ArbitraryExternalCallAddressUnbounded => Self::FatalExternalError,
         }
     }
