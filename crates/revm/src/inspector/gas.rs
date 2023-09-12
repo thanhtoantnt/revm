@@ -25,9 +25,9 @@ impl<DB: Database> Inspector<DB> for GasInspector {
     #[cfg(not(feature = "no_gas_measuring"))]
     fn initialize_interp(
         &mut self,
-        interp: &mut crate::interpreter::Interpreter,
-        _data: &mut EVMData<'_, DB>,
+        data: &mut EVMData<'_, DB>,
     ) -> InstructionResult {
+        let interp = data.last_interpreter();
         self.gas_remaining = interp.gas.limit();
         InstructionResult::Continue
     }
@@ -38,7 +38,6 @@ impl<DB: Database> Inspector<DB> for GasInspector {
     #[cfg(not(feature = "no_gas_measuring"))]
     fn step(
         &mut self,
-        _interp: &mut crate::interpreter::Interpreter,
         _data: &mut EVMData<'_, DB>,
     ) -> InstructionResult {
         InstructionResult::Continue
@@ -47,11 +46,12 @@ impl<DB: Database> Inspector<DB> for GasInspector {
     #[cfg(not(feature = "no_gas_measuring"))]
     fn step_end(
         &mut self,
-        interp: &mut crate::interpreter::Interpreter,
-        _data: &mut EVMData<'_, DB>,
+        data: &mut EVMData<'_, DB>,
         _eval: InstructionResult,
     ) -> InstructionResult {
         let last_gas = self.gas_remaining;
+        let interp = data.last_interpreter();
+
         self.gas_remaining = interp.gas.remaining();
         if last_gas > self.gas_remaining {
             self.last_gas_cost = last_gas - self.gas_remaining;
@@ -95,7 +95,7 @@ impl<DB: Database> Inspector<DB> for GasInspector {
 mod tests {
     use crate::db::BenchmarkDB;
     use crate::interpreter::{
-        opcode, CallInputs, CreateInputs, Gas, InstructionResult, Interpreter, OpCode,
+        opcode, CallInputs, CreateInputs, Gas, InstructionResult, OpCode,
     };
     use crate::primitives::{
         hex_literal::hex, Bytecode, Bytes, ResultAndState, TransactTo, B160, B256,
@@ -112,20 +112,20 @@ mod tests {
     impl<DB: Database> Inspector<DB> for StackInspector {
         fn initialize_interp(
             &mut self,
-            interp: &mut Interpreter,
             data: &mut EVMData<'_, DB>,
         ) -> InstructionResult {
-            self.gas_inspector.initialize_interp(interp, data);
+            self.gas_inspector.initialize_interp(data);
             InstructionResult::Continue
         }
 
         fn step(
             &mut self,
-            interp: &mut Interpreter,
             data: &mut EVMData<'_, DB>,
         ) -> InstructionResult {
+            let interp = data.last_interpreter();
+
             self.pc = interp.program_counter();
-            self.gas_inspector.step(interp, data);
+            self.gas_inspector.step(data);
             InstructionResult::Continue
         }
 
@@ -141,11 +141,10 @@ mod tests {
 
         fn step_end(
             &mut self,
-            interp: &mut Interpreter,
             data: &mut EVMData<'_, DB>,
             eval: InstructionResult,
         ) -> InstructionResult {
-            self.gas_inspector.step_end(interp, data, eval);
+            self.gas_inspector.step_end(data, eval);
             self.gas_remaining_steps
                 .push((self.pc, self.gas_inspector.gas_remaining()));
             eval

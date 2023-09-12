@@ -6,9 +6,12 @@ extern crate alloc;
 
 pub mod db;
 mod evm;
+mod evm_checkpoint;
 mod evm_impl;
 mod inspector;
 mod journaled_state;
+
+pub use evm_checkpoint::*;
 
 #[cfg(all(feature = "with-serde", not(feature = "serde")))]
 compile_error!("`with-serde` feature has been renamed to `serde`.");
@@ -41,3 +44,4 @@ pub use revm_interpreter::primitives;
 // reexport inspector implementations
 pub use inspector::inspectors;
 pub use inspector::Inspector;
+

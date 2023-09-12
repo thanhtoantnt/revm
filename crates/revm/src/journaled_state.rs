@@ -86,6 +86,7 @@ pub enum JournalEntry {
     CodeChange { address: B160 },
 }
 
+#[derive(Clone)]
 /// SubRoutine checkpoint that will help us to go back from this
 pub struct JournalCheckpoint {
     log_i: usize,

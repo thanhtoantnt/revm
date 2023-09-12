@@ -1,5 +1,5 @@
 use crate::evm_impl::EVMData;
-use crate::interpreter::{CallInputs, CreateInputs, Gas, InstructionResult, Interpreter};
+use crate::interpreter::{CallInputs, CreateInputs, Gas, InstructionResult};
 use crate::primitives::{db::Database, Bytes, B160, B256, U256};
 
 use auto_impl::auto_impl;
@@ -33,7 +33,6 @@ pub trait Inspector<DB: Database> {
     /// skipped.
     fn initialize_interp(
         &mut self,
-        _interp: &mut Interpreter,
         _data: &mut EVMData<'_, DB>,
     ) -> InstructionResult {
         InstructionResult::Continue
@@ -49,7 +48,6 @@ pub trait Inspector<DB: Database> {
     /// To get the current opcode, use `interp.current_opcode()`.
     fn step(
         &mut self,
-        _interp: &mut Interpreter,
         _data: &mut EVMData<'_, DB>,
     ) -> InstructionResult {
         InstructionResult::Continue
@@ -70,7 +68,6 @@ pub trait Inspector<DB: Database> {
     /// InstructionResulting anything other than [InstructionResult::Continue] alters the execution of the interpreter.
     fn step_end(
         &mut self,
-        _interp: &mut Interpreter,
         _data: &mut EVMData<'_, DB>,
         _eval: InstructionResult,
     ) -> InstructionResult {

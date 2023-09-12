@@ -5,9 +5,9 @@ use crate::interpreter::{
 };
 use crate::journaled_state::{is_precompile, JournalCheckpoint};
 use crate::primitives::{
-    create2_address, create_address, keccak256, Account, AnalysisKind, Bytecode, Bytes, EVMError,
-    EVMResult, Env, ExecutionResult, HashMap, InvalidTransaction, Log, Output, ResultAndState,
-    Spec,
+    create2_address, create_address, keccak256, Account, AnalysisKind, Bytecode, Bytes,
+    EVMError, EVMResult, Env, ExecutionResult, HashMap, InvalidTransaction, Log, Output,
+    ResultAndState, Spec,
     SpecId::{self, *},
     TransactTo, B160, B256, U256,
 };
@@ -25,14 +25,28 @@ pub struct EVMData<'a, DB: Database> {
     pub db: &'a mut DB,
     pub error: Option<DB::Error>,
     pub precompiles: Precompiles,
+
+    pub interpreters: Vec<Box<Interpreter>>,
+    pub last_result: Option<InstructionResult>,
+}
+
+impl<'a, DB: Database> EVMData<'a, DB> {
+    pub fn last_interpreter(&mut self) -> &mut Interpreter {
+        self.interpreters.last_mut().unwrap()
+    }
+
+    pub fn last_result(&self) -> Option<InstructionResult> {
+        self.last_result
+    }
 }
 
 pub struct EVMImpl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> {
-    data: EVMData<'a, DB>,
-    inspector: &'a mut dyn Inspector<DB>,
-    _phantomdata: PhantomData<GSPEC>,
+    pub data: EVMData<'a, DB>,
+    pub inspector: &'a mut dyn Inspector<DB>,
+    pub _phantomdata: PhantomData<GSPEC>,
 }
 
+#[derive(Clone)]
 struct PreparedCreate {
     gas: Gas,
     created_address: B160,
@@ -47,6 +61,7 @@ struct CreateResult {
     return_value: Bytes,
 }
 
+#[derive(Clone)]
 struct PreparedCall {
     gas: Gas,
     checkpoint: JournalCheckpoint,
@@ -57,6 +72,41 @@ struct CallResult {
     result: InstructionResult,
     gas: Gas,
     return_value: Bytes,
+}
+
+enum PreparedCallOrCreate {
+    Call(PreparedCall),
+    Create(PreparedCreate),
+}
+
+impl PreparedCallOrCreate {
+    pub fn gas_limit(&mut self) -> u64 {
+        match self {
+            PreparedCallOrCreate::Call(call) => call.gas.limit(),
+            PreparedCallOrCreate::Create(create) => create.gas.limit(),
+        }
+    }
+
+    pub fn gas_mut(&mut self) -> &mut Gas {
+        match self {
+            PreparedCallOrCreate::Call(call) => &mut call.gas,
+            PreparedCallOrCreate::Create(create) => &mut create.gas,
+        }
+    }
+
+    pub fn contract(&self) -> &Box<Contract> {
+        match self {
+            PreparedCallOrCreate::Call(call) => &call.contract,
+            PreparedCallOrCreate::Create(create) => &create.contract,
+        }
+    }
+
+    pub fn contract_mut(&mut self) -> &mut Box<Contract> {
+        match self {
+            PreparedCallOrCreate::Call(call) => &mut call.contract,
+            PreparedCallOrCreate::Create(create) => &mut create.contract,
+        }
+    }
 }
 
 pub trait Transact<DBError> {
@@ -271,6 +321,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 db,
                 error: None,
                 precompiles,
+                interpreters: vec![],
+                last_result: None,
             },
             inspector,
             _phantomdata: PhantomData {},
@@ -458,11 +510,18 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         let (exit_reason, mut interpreter) =
             self.run_interpreter(prepared_create.contract, prepared_create.gas.limit(), false);
 
+        let mut ret = CreateResult {
+            result: exit_reason,
+            created_address: Some(prepared_create.created_address),
+            gas: interpreter.gas,
+            return_value: interpreter.return_value(),
+        };
+
         // Host error if present on execution
-        match exit_reason {
+        match ret.result {
             return_ok!() => {
                 // if ok, check contract creation limit and calculate gas deduction on output len.
-                let mut bytes = interpreter.return_value();
+                let mut bytes = ret.return_value;
 
                 // EIP-3541: Reject new contract code starting with the 0xEF byte
                 if GSPEC::enabled(LONDON) && !bytes.is_empty() && bytes.first() == Some(&0xEF) {
@@ -472,7 +531,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                     return CreateResult {
                         result: InstructionResult::CreateContractStartingWithEF,
                         created_address: Some(prepared_create.created_address),
-                        gas: interpreter.gas,
+                        gas: ret.gas,
                         return_value: bytes,
                     };
                 }
@@ -494,13 +553,13 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                     return CreateResult {
                         result: InstructionResult::CreateContractSizeLimit,
                         created_address: Some(prepared_create.created_address),
-                        gas: interpreter.gas,
+                        gas: ret.gas,
                         return_value: bytes,
                     };
                 }
                 if crate::USE_GAS {
                     let gas_for_code = bytes.len() as u64 * gas::CODEDEPOSIT;
-                    if !interpreter.gas.record_cost(gas_for_code) {
+                    if !ret.gas.record_cost(gas_for_code) {
                         // record code deposit gas cost and check if we are out of gas.
                         // EIP-2 point 3: If contract creation does not have enough gas to pay for the
                         // final gas fee for adding the contract code to the state, the contract
@@ -512,7 +571,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                             return CreateResult {
                                 result: InstructionResult::OutOfGas,
                                 created_address: Some(prepared_create.created_address),
-                                gas: interpreter.gas,
+                                gas: ret.gas,
                                 return_value: bytes,
                             };
                         } else {
@@ -534,7 +593,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 CreateResult {
                     result: InstructionResult::Return,
                     created_address: Some(prepared_create.created_address),
-                    gas: interpreter.gas,
+                    gas: ret.gas,
                     return_value: bytes,
                 }
             }
@@ -545,8 +604,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 CreateResult {
                     result: exit_reason,
                     created_address: Some(prepared_create.created_address),
-                    gas: interpreter.gas,
-                    return_value: interpreter.return_value(),
+                    gas: ret.gas,
+                    return_value: ret.return_value,
                 }
             }
         }
@@ -562,7 +621,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
     ) -> (InstructionResult, Box<Interpreter>) {
         // Create inspector
         #[cfg(feature = "memory_limit")]
-        let mut interpreter = Box::new(Interpreter::new_with_memory_limit(
+        let interpreter = Box::new(Interpreter::new_with_memory_limit(
             contract,
             gas_limit,
             is_static,
@@ -570,19 +629,27 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         ));
 
         #[cfg(not(feature = "memory_limit"))]
-        let mut interpreter = Box::new(Interpreter::new(contract, gas_limit, is_static));
+        let interpreter = Box::new(Interpreter::new(contract, gas_limit, is_static));
+
+        self.data.interpreters.push(interpreter);
 
         if INSPECT {
-            self.inspector
-                .initialize_interp(&mut interpreter, &mut self.data);
+            self.inspector.initialize_interp(&mut self.data);
         }
-        let exit_reason = if INSPECT {
-            interpreter.run_inspect::<Self, GSPEC>(self)
-        } else {
-            interpreter.run::<Self, GSPEC>(self)
+
+        let interpreter = self.data.interpreters.last_mut().unwrap();
+
+        let exit_reason = unsafe {
+            let ptr = interpreter.as_ref() as *const Interpreter as *mut Interpreter;
+
+            if INSPECT {
+                (*ptr).run_inspect::<Self, GSPEC>(self)
+            } else {
+                (*ptr).run::<Self, GSPEC>(self)
+            }
         };
 
-        (exit_reason, interpreter)
+        (exit_reason, self.data.interpreters.pop().unwrap())
     }
 
     /// Call precompile contract
@@ -715,6 +782,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 prepared_call.gas.limit(),
                 inputs.is_static,
             );
+
             CallResult {
                 result: exit_reason,
                 gas: interpreter.gas,
@@ -744,12 +812,12 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
 impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host
     for EVMImpl<'a, GSPEC, DB, INSPECT>
 {
-    fn step(&mut self, interp: &mut Interpreter) -> InstructionResult {
-        self.inspector.step(interp, &mut self.data)
+    fn step(&mut self, _interp: &mut Interpreter) -> InstructionResult {
+        self.inspector.step(&mut self.data)
     }
 
-    fn step_end(&mut self, interp: &mut Interpreter, ret: InstructionResult) -> InstructionResult {
-        self.inspector.step_end(interp, &mut self.data, ret)
+    fn step_end(&mut self, _interp: &mut Interpreter, ret: InstructionResult) -> InstructionResult {
+        self.inspector.step_end(&mut self.data, ret)
     }
 
     fn env(&mut self) -> &mut Env {

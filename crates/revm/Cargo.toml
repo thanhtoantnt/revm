@@ -66,9 +66,9 @@ arbitrary = ["revm-interpreter/arbitrary"]
 web3db = []
 with-serde = []
 
-[[example]]
-name = "fork_ref_transact"
-path = "../../examples/fork_ref_transact.rs"
+#[[example]]
+#name = "fork_ref_transact"
+#path = "../../examples/fork_ref_transact.rs"
 
 [[bench]]
 name = "bench"

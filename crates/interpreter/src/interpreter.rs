@@ -26,6 +26,7 @@ pub const MAX_CODE_SIZE: usize = 0x6000;
 /// EIP-3860: Limit and meter initcode
 pub const MAX_INITCODE_SIZE: usize = 2 * MAX_CODE_SIZE;
 
+#[derive(Clone)]
 pub struct Interpreter {
     /// Instruction pointer.
     pub instruction_pointer: *const u8,

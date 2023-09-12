@@ -12,24 +12,25 @@ pub struct CustomPrintTracer {
 impl<DB: Database> Inspector<DB> for CustomPrintTracer {
     fn initialize_interp(
         &mut self,
-        interp: &mut Interpreter,
         data: &mut EVMData<'_, DB>,
     ) -> InstructionResult {
-        self.gas_inspector.initialize_interp(interp, data);
+        self.gas_inspector.initialize_interp( data);
         InstructionResult::Continue
     }
 
     // get opcode by calling `interp.contract.opcode(interp.program_counter())`.
     // all other information can be obtained from interp.
-    fn step(&mut self, interp: &mut Interpreter, data: &mut EVMData<'_, DB>) -> InstructionResult {
+    fn step(&mut self, data: &mut EVMData<'_, DB>) -> InstructionResult {
+        let gas_remaining = self.gas_inspector.gas_remaining();
+
+        let depth = data.journaled_state.depth();
+        let interp = data.last_interpreter();
         let opcode = interp.current_opcode();
         let opcode_str = opcode::OPCODE_JUMPMAP[opcode as usize];
 
-        let gas_remaining = self.gas_inspector.gas_remaining();
-
         println!(
             "depth:{}, PC:{}, gas:{:#x}({}), OPCODE: {:?}({:?})  refund:{:#x}({}) Stack:{:?}, Data size:{}",
-            data.journaled_state.depth(),
+            depth,
             interp.program_counter(),
             gas_remaining,
             gas_remaining,
@@ -41,18 +42,17 @@ impl<DB: Database> Inspector<DB> for CustomPrintTracer {
             interp.memory.data().len(),
         );
 
-        self.gas_inspector.step(interp, data);
+        self.gas_inspector.step(data);
 
         InstructionResult::Continue
     }
 
     fn step_end(
         &mut self,
-        interp: &mut Interpreter,
         data: &mut EVMData<'_, DB>,
         eval: InstructionResult,
     ) -> InstructionResult {
-        self.gas_inspector.step_end(interp, data, eval);
+        self.gas_inspector.step_end(data, eval);
         InstructionResult::Continue
     }
 
