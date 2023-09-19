@@ -1,0 +1,3 @@
+[submodule "bins/revme/tests"]
+	path = bins/revme/tests
+	url = https://github.com/ethereum/tests
