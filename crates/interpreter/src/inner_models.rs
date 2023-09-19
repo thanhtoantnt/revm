@@ -3,6 +3,7 @@ use crate::primitives::{Bytes, B160, U256};
 
 /// Inputs for a call.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct CallInputs {
     /// The target of the call.
     pub contract: B160,
@@ -23,6 +24,7 @@ pub struct CallInputs {
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone)]
 pub struct CreateInputs {
     pub caller: B160,
     pub scheme: CreateScheme,

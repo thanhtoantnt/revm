@@ -384,7 +384,9 @@ pub fn run(
         let console_bar = console_bar.clone();
         let elapsed = elapsed.clone();
 
-        let thread = std::thread::Builder::new().name(format!("runner-{i}"));
+        let thread = std::thread::Builder::new()
+            .stack_size(64 * 1024 * 1024)
+            .name(format!("runner-{i}"));
 
         let f = move || loop {
             if endjob.load(Ordering::SeqCst) {

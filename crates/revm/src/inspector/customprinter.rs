@@ -1,7 +1,7 @@
 //! Custom print inspector, it has step level information of execution.
 //! It is a great tool if some debugging is needed.
 //!
-use crate::interpreter::{opcode, CallInputs, CreateInputs, Gas, InstructionResult, Interpreter};
+use crate::interpreter::{opcode, CallInputs, CreateInputs, Gas, InstructionResult};
 use crate::primitives::{hex, Bytes, B160, U256};
 use crate::{inspectors::GasInspector, Database, EVMData, Inspector};
 #[derive(Clone, Default)]
