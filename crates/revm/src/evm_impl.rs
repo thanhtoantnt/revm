@@ -776,7 +776,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         #[cfg(not(feature = "memory_limit"))]
         let interpreter = Box::new(Interpreter::new(contract, gas_limit, is_static));
 
-        return interpreter;
+        interpreter
     }
 
     /// Create a Interpreter and run it.
@@ -788,7 +788,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
 
         let interpreter = self.data.last_interpreter();
 
-        let exit_reason = unsafe {
+        unsafe {
             let ptr = interpreter as *const Interpreter as *mut Interpreter;
 
             if INSPECT {
@@ -796,9 +796,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
             } else {
                 (*ptr).run::<Self, GSPEC>(self)
             }
-        };
-
-        exit_reason
+        }
     }
 
     /// Call precompile contract
