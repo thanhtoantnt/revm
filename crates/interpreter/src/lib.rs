@@ -18,6 +18,7 @@ pub use host::{DummyHost, Host};
 pub use inner_models::*;
 pub use instruction_result::InstructionResult;
 pub use instructions::opcode::{self, OpCode, OPCODE_JUMPMAP};
+pub use instructions::{post_call, post_create};
 pub use interpreter::*;
 pub use interpreter::{BytecodeLocked, Contract, Interpreter, Memory, Stack};
 

@@ -54,7 +54,7 @@ pub struct PreparedCreate {
     contract: Box<Contract>,
 }
 
-pub struct CreateResult {
+struct CreateResult {
     result: InstructionResult,
     created_address: Option<B160>,
     gas: Gas,
@@ -68,7 +68,7 @@ pub struct PreparedCall {
     contract: Box<Contract>,
 }
 
-pub struct CallResult {
+struct CallResult {
     result: InstructionResult,
     gas: Gas,
     return_value: Bytes,
@@ -158,6 +158,98 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
                 .map_err(EVMError::Database)?;
         }
         Ok(())
+    }
+
+    pub fn resume(&mut self) -> EVMResult<DB::Error> {
+        if self.data.execution_contexts.is_empty() {
+            panic!("No execution context to resume");
+        }
+
+        let mut last_result: Option<(InstructionResult, Gas, Output)> = None;
+
+        while let Some(context) = self.data.execution_contexts.pop() {
+            let mut interpreter = context.interpreter;
+            let exit_reason = unsafe {
+                let ptr = interpreter.as_mut() as *const Interpreter as *mut Interpreter;
+
+                if INSPECT {
+                    (*ptr).run_inspect::<Self, GSPEC>(self)
+                } else {
+                    (*ptr).run::<Self, GSPEC>(self)
+                }
+            };
+
+            match context.prepared_call_or_create {
+                PreparedCallOrCreate::Call(prepared_call, inputs) => {
+                    let ret = CallResult {
+                        result: exit_reason,
+                        gas: interpreter.gas,
+                        return_value: interpreter.return_value(),
+                    };
+                    let ret = self.post_call_inner(prepared_call.checkpoint, ret);
+
+                    if INSPECT {
+                        self.inspector.call_end(
+                            &mut self.data,
+                            &inputs,
+                            ret.gas,
+                            ret.result,
+                            ret.return_value.clone(),
+                        );
+                    }
+
+                    revm_interpreter::post_call::<GSPEC>(
+                        interpreter.as_mut(),
+                        &inputs,
+                        ret.result,
+                        ret.gas,
+                        ret.return_value.clone(),
+                    );
+
+                    if self.data.execution_contexts.is_empty() {
+                        let output = Output::Call(ret.return_value);
+                        last_result = Some((ret.result, ret.gas, output));
+                    }
+                }
+                PreparedCallOrCreate::Create(prepared_create, inputs) => {
+                    let ret = CreateResult {
+                        result: exit_reason,
+                        created_address: Some(prepared_create.created_address),
+                        gas: interpreter.gas,
+                        return_value: interpreter.return_value(),
+                    };
+                    let ret = self.post_create_inner(prepared_create.checkpoint, ret);
+
+                    if INSPECT {
+                        self.inspector.create_end(
+                            &mut self.data,
+                            &inputs,
+                            ret.result,
+                            ret.created_address,
+                            ret.gas,
+                            ret.return_value.clone(),
+                        );
+                    }
+
+                    revm_interpreter::post_create::<GSPEC>(
+                        interpreter.as_mut(),
+                        ret.result,
+                        ret.created_address,
+                        ret.gas,
+                        ret.return_value.clone(),
+                    );
+
+                    if self.data.execution_contexts.is_empty() {
+                        let output = Output::Create(ret.return_value, ret.created_address);
+                        last_result = Some((ret.result, ret.gas, output));
+                    }
+                }
+            }
+        }
+
+        let (exit_reason, ret_gas, output) = last_result.unwrap();
+
+        self.finalize_transaction(self.data.env.tx.gas_limit, exit_reason, ret_gas, output)
     }
 }
 
@@ -268,6 +360,8 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                         scheme: CallScheme::Call,
                     },
                     is_static: false,
+                    out_len: 0,
+                    out_offset: 0,
                 });
                 (exit, gas, Output::Call(bytes))
             }
@@ -283,51 +377,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
             }
         };
 
-        // set gas with gas limit and spend it all. Gas is going to be reimbursed when
-        // transaction is returned successfully.
-        let mut gas = Gas::new(tx_gas_limit);
-        gas.record_cost(tx_gas_limit);
-
-        if crate::USE_GAS {
-            match exit_reason {
-                return_ok!() => {
-                    gas.erase_cost(ret_gas.remaining());
-                    gas.record_refund(ret_gas.refunded());
-                }
-                return_revert!() => {
-                    gas.erase_cost(ret_gas.remaining());
-                }
-                _ => {}
-            }
-        }
-
-        let (state, logs, gas_used, gas_refunded) = self.finalize::<GSPEC>(&gas);
-
-        let result = match exit_reason.into() {
-            SuccessOrHalt::Success(reason) => ExecutionResult::Success {
-                reason,
-                gas_used,
-                gas_refunded,
-                logs,
-                output,
-            },
-            SuccessOrHalt::Revert => ExecutionResult::Revert {
-                gas_used,
-                output: match output {
-                    Output::Call(return_value) => return_value,
-                    Output::Create(return_value, _) => return_value,
-                },
-            },
-            SuccessOrHalt::Halt(reason) => ExecutionResult::Halt { reason, gas_used },
-            SuccessOrHalt::FatalExternalError => {
-                return Err(EVMError::Database(self.data.error.take().unwrap()));
-            }
-            SuccessOrHalt::InternalContinue => {
-                panic!("Internal return flags should remain internal {exit_reason:?}")
-            }
-        };
-
-        Ok(ResultAndState { result, state })
+        self.finalize_transaction(tx_gas_limit, exit_reason, ret_gas, output)
     }
 }
 
@@ -419,6 +469,60 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
             };
         let (new_state, logs) = self.data.journaled_state.finalize();
         (new_state, logs, gas_used, gas_refunded)
+    }
+
+    fn finalize_transaction(
+        &mut self,
+        tx_gas_limit: u64,
+        exit_reason: InstructionResult,
+        ret_gas: Gas,
+        output: Output,
+    ) -> EVMResult<DB::Error> {
+        // set gas with gas limit and spend it all. Gas is going to be reimbursed when
+        // transaction is returned successfully.
+        let mut gas = Gas::new(tx_gas_limit);
+        gas.record_cost(tx_gas_limit);
+
+        if crate::USE_GAS {
+            match exit_reason {
+                return_ok!() => {
+                    gas.erase_cost(ret_gas.remaining());
+                    gas.record_refund(ret_gas.refunded());
+                }
+                return_revert!() => {
+                    gas.erase_cost(ret_gas.remaining());
+                }
+                _ => {}
+            }
+        }
+
+        let (state, logs, gas_used, gas_refunded) = self.finalize::<GSPEC>(&gas);
+
+        let result = match exit_reason.into() {
+            SuccessOrHalt::Success(reason) => ExecutionResult::Success {
+                reason,
+                gas_used,
+                gas_refunded,
+                logs,
+                output,
+            },
+            SuccessOrHalt::Revert => ExecutionResult::Revert {
+                gas_used,
+                output: match output {
+                    Output::Call(return_value) => return_value,
+                    Output::Create(return_value, _) => return_value,
+                },
+            },
+            SuccessOrHalt::Halt(reason) => ExecutionResult::Halt { reason, gas_used },
+            SuccessOrHalt::FatalExternalError => {
+                return Err(EVMError::Database(self.data.error.take().unwrap()));
+            }
+            SuccessOrHalt::InternalContinue => {
+                panic!("Internal return flags should remain internal {exit_reason:?}")
+            }
+        };
+
+        Ok(ResultAndState { result, state })
     }
 
     #[inline(never)]

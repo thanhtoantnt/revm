@@ -23,10 +23,7 @@ impl GasInspector {
 
 impl<DB: Database> Inspector<DB> for GasInspector {
     #[cfg(not(feature = "no_gas_measuring"))]
-    fn initialize_interp(
-        &mut self,
-        data: &mut EVMData<'_, DB>,
-    ) -> InstructionResult {
+    fn initialize_interp(&mut self, data: &mut EVMData<'_, DB>) -> InstructionResult {
         let interp = data.last_interpreter();
         self.gas_remaining = interp.gas.limit();
         InstructionResult::Continue
@@ -36,10 +33,7 @@ impl<DB: Database> Inspector<DB> for GasInspector {
     // all other information can be obtained from interp.
 
     #[cfg(not(feature = "no_gas_measuring"))]
-    fn step(
-        &mut self,
-        _data: &mut EVMData<'_, DB>,
-    ) -> InstructionResult {
+    fn step(&mut self, _data: &mut EVMData<'_, DB>) -> InstructionResult {
         InstructionResult::Continue
     }
 
@@ -94,9 +88,7 @@ impl<DB: Database> Inspector<DB> for GasInspector {
 #[cfg(test)]
 mod tests {
     use crate::db::BenchmarkDB;
-    use crate::interpreter::{
-        opcode, CallInputs, CreateInputs, Gas, InstructionResult, OpCode,
-    };
+    use crate::interpreter::{opcode, CallInputs, CreateInputs, Gas, InstructionResult, OpCode};
     use crate::primitives::{
         hex_literal::hex, Bytecode, Bytes, ResultAndState, TransactTo, B160, B256,
     };
@@ -110,18 +102,12 @@ mod tests {
     }
 
     impl<DB: Database> Inspector<DB> for StackInspector {
-        fn initialize_interp(
-            &mut self,
-            data: &mut EVMData<'_, DB>,
-        ) -> InstructionResult {
+        fn initialize_interp(&mut self, data: &mut EVMData<'_, DB>) -> InstructionResult {
             self.gas_inspector.initialize_interp(data);
             InstructionResult::Continue
         }
 
-        fn step(
-            &mut self,
-            data: &mut EVMData<'_, DB>,
-        ) -> InstructionResult {
+        fn step(&mut self, data: &mut EVMData<'_, DB>) -> InstructionResult {
             let interp = data.last_interpreter();
 
             self.pc = interp.program_counter();

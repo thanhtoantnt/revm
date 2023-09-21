@@ -1,5 +1,4 @@
 use crate::primitives::{Bytes, Spec, SpecId::*, B160, B256, U256};
-use crate::MAX_INITCODE_SIZE;
 use crate::{
     alloc::boxed::Box,
     alloc::vec::Vec,
@@ -8,6 +7,7 @@ use crate::{
     return_ok, return_revert, CallContext, CallInputs, CallScheme, CreateInputs, CreateScheme,
     Host, InstructionResult, Transfer,
 };
+use crate::{Gas, MAX_INITCODE_SIZE};
 use core::cmp::min;
 use revm_primitives::BLOCK_HASH_HISTORY;
 
@@ -323,6 +323,16 @@ pub fn create<const IS_CREATE2: bool, SPEC: Spec>(
 
     let (return_reason, address, gas, return_data) = host.create(&mut create_input);
 
+    post_create::<SPEC>(interpreter, return_reason, address, gas, return_data)
+}
+
+pub fn post_create<SPEC: Spec>(
+    interpreter: &mut Interpreter,
+    return_reason: InstructionResult,
+    address: Option<B160>,
+    gas: Gas,
+    return_data: Bytes,
+) {
     interpreter.return_data_buffer = match return_reason {
         // Save data to return data buffer if the create reverted
         return_revert!() => return_data,
@@ -510,6 +520,8 @@ fn prepare_call_inputs<SPEC: Spec>(
         gas_limit,
         context,
         is_static,
+        out_len: *result_len,
+        out_offset: *result_offset,
     }));
 }
 
@@ -544,9 +556,18 @@ pub fn call_inner<SPEC: Spec>(
     // Call host to interact with target contract
     let (reason, gas, return_data) = host.call(&mut call_input);
 
-    interpreter.return_data_buffer = return_data;
+    post_call::<SPEC>(interpreter, &call_input, reason, gas, return_data);
+}
 
-    let target_len = min(out_len, interpreter.return_data_buffer.len());
+pub fn post_call<SPEC: Spec>(
+    interpreter: &mut Interpreter,
+    call_inputs: &CallInputs,
+    reason: InstructionResult,
+    gas: Gas,
+    return_data: Bytes,
+) {
+    interpreter.return_data_buffer = return_data;
+    let target_len = min(call_inputs.out_len, interpreter.return_data_buffer.len());
 
     match reason {
         return_ok!() => {
@@ -555,18 +576,20 @@ pub fn call_inner<SPEC: Spec>(
                 interpreter.gas.erase_cost(gas.remaining());
                 interpreter.gas.record_refund(gas.refunded());
             }
-            interpreter
-                .memory
-                .set(out_offset, &interpreter.return_data_buffer[..target_len]);
+            interpreter.memory.set(
+                call_inputs.out_offset,
+                &interpreter.return_data_buffer[..target_len],
+            );
             push!(interpreter, U256::from(1));
         }
         return_revert!() => {
             if crate::USE_GAS {
                 interpreter.gas.erase_cost(gas.remaining());
             }
-            interpreter
-                .memory
-                .set(out_offset, &interpreter.return_data_buffer[..target_len]);
+            interpreter.memory.set(
+                call_inputs.out_offset,
+                &interpreter.return_data_buffer[..target_len],
+            );
             push!(interpreter, U256::ZERO);
         }
         InstructionResult::FatalExternalError => {

@@ -31,10 +31,7 @@ pub trait Inspector<DB: Database> {
     ///
     /// If anything other than [InstructionResult::Continue] is returned then execution of the interpreter is
     /// skipped.
-    fn initialize_interp(
-        &mut self,
-        _data: &mut EVMData<'_, DB>,
-    ) -> InstructionResult {
+    fn initialize_interp(&mut self, _data: &mut EVMData<'_, DB>) -> InstructionResult {
         InstructionResult::Continue
     }
 
@@ -46,10 +43,7 @@ pub trait Inspector<DB: Database> {
     /// # Example
     ///
     /// To get the current opcode, use `interp.current_opcode()`.
-    fn step(
-        &mut self,
-        _data: &mut EVMData<'_, DB>,
-    ) -> InstructionResult {
+    fn step(&mut self, _data: &mut EVMData<'_, DB>) -> InstructionResult {
         InstructionResult::Continue
     }
 

@@ -10,11 +10,8 @@ pub struct CustomPrintTracer {
 }
 
 impl<DB: Database> Inspector<DB> for CustomPrintTracer {
-    fn initialize_interp(
-        &mut self,
-        data: &mut EVMData<'_, DB>,
-    ) -> InstructionResult {
-        self.gas_inspector.initialize_interp( data);
+    fn initialize_interp(&mut self, data: &mut EVMData<'_, DB>) -> InstructionResult {
+        self.gas_inspector.initialize_interp(data);
         InstructionResult::Continue
     }
 

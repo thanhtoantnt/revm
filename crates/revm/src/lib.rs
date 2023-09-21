@@ -44,4 +44,3 @@ pub use revm_interpreter::primitives;
 // reexport inspector implementations
 pub use inspector::inspectors;
 pub use inspector::Inspector;
-

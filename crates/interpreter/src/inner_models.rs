@@ -21,6 +21,8 @@ pub struct CallInputs {
     pub context: CallContext,
     /// Is static call
     pub is_static: bool,
+    pub out_len: usize,
+    pub out_offset: usize,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
