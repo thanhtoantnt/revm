@@ -1,8 +1,7 @@
-use std::sync::Arc;
 use super::analysis::{to_analysed, BytecodeLocked};
 use crate::primitives::{Bytecode, Bytes, B160, U256};
 use crate::CallContext;
-use revm_primitives::{Env, TransactTo};
+use std::sync::Arc;
 
 #[derive(Clone, Default)]
 pub struct Contract {
@@ -22,7 +21,14 @@ pub struct Contract {
 }
 
 impl Contract {
-    pub fn new(input: Bytes, bytecode: Bytecode, address: B160, code_address: B160, caller: B160, value: U256) -> Self {
+    pub fn new(
+        input: Bytes,
+        bytecode: Bytecode,
+        address: B160,
+        code_address: B160,
+        caller: B160,
+        value: U256,
+    ) -> Self {
         let bytecode = Arc::new(to_analysed(bytecode).try_into().expect("it is analyzed"));
 
         Self {
@@ -34,7 +40,6 @@ impl Contract {
             value,
         }
     }
-
 
     pub fn is_valid_jump(&self, possition: usize) -> bool {
         self.bytecode.jump_map().is_valid(possition)
@@ -51,8 +56,11 @@ impl Contract {
         )
     }
 
-
-    pub fn new_with_context_analyzed(input: Bytes, bytecode: Arc<BytecodeLocked>, call_context: &CallContext) -> Self {
+    pub fn new_with_context_analyzed(
+        input: Bytes,
+        bytecode: Arc<BytecodeLocked>,
+        call_context: &CallContext,
+    ) -> Self {
         Self {
             input,
             bytecode,

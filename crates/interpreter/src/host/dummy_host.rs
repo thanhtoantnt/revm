@@ -1,5 +1,9 @@
 use crate::primitives::{hash_map::Entry, Bytes, HashMap, U256};
-use crate::{primitives::{Env, Log, B160, B256, KECCAK_EMPTY}, CallInputs, CreateInputs, Gas, Host, InstructionResult, Interpreter, SelfDestructResult, BytecodeLocked};
+use crate::{
+    primitives::{Env, Log, B160, B256, KECCAK_EMPTY},
+    BytecodeLocked, CallInputs, CreateInputs, Gas, Host, InstructionResult, Interpreter,
+    SelfDestructResult,
+};
 use alloc::vec::Vec;
 use std::sync::Arc;
 
@@ -32,7 +36,7 @@ impl Host<u32> for DummyHost {
         &mut self,
         _interp: &mut Interpreter,
         _ret: InstructionResult,
-        _: &mut u32
+        _: &mut u32,
     ) -> InstructionResult {
         InstructionResult::Continue
     }
@@ -108,7 +112,13 @@ impl Host<u32> for DummyHost {
         panic!("Create is not supported for this host")
     }
 
-    fn call(&mut self, _input: &mut CallInputs, _: &mut Interpreter, output_info: (usize, usize), _: &mut u32) -> (InstructionResult, Gas, Bytes) {
+    fn call(
+        &mut self,
+        _input: &mut CallInputs,
+        _: &mut Interpreter,
+        _output_info: (usize, usize),
+        _: &mut u32,
+    ) -> (InstructionResult, Gas, Bytes) {
         panic!("Call is not supported for this host")
     }
 }
