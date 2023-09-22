@@ -14,10 +14,10 @@ use crate::primitives::{
 use crate::{db::Database, journaled_state::JournaledState, precompile, Inspector};
 use alloc::vec::Vec;
 use core::{cmp::min, marker::PhantomData};
-use std::sync::Arc;
 use revm_interpreter::gas::initial_tx_gas;
 use revm_interpreter::{BytecodeLocked, MAX_CODE_SIZE};
 use revm_precompile::{Precompile, Precompiles};
+use std::sync::Arc;
 
 pub struct EVMData<'a, DB: Database> {
     pub env: &'a mut Env,
@@ -117,35 +117,42 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                 caller_account.info.nonce =
                     caller_account.info.nonce.checked_add(1).unwrap_or(u64::MAX);
 
-                let (exit, gas, bytes) = self.call(&mut CallInputs {
-                    contract: address,
-                    transfer: Transfer {
-                        source: tx_caller,
-                        target: address,
-                        value: tx_value,
+                let (exit, gas, bytes) = self.call(
+                    &mut CallInputs {
+                        contract: address,
+                        transfer: Transfer {
+                            source: tx_caller,
+                            target: address,
+                            value: tx_value,
+                        },
+                        input: tx_data,
+                        gas_limit: transact_gas_limit,
+                        context: CallContext {
+                            caller: tx_caller,
+                            address,
+                            code_address: address,
+                            apparent_value: tx_value,
+                            scheme: CallScheme::Call,
+                        },
+                        is_static: false,
                     },
-                    input: tx_data,
-                    gas_limit: transact_gas_limit,
-                    context: CallContext {
-                        caller: tx_caller,
-                        address,
-                        code_address: address,
-                        apparent_value: tx_value,
-                        scheme: CallScheme::Call,
-                    },
-                    is_static: false,
-                },&mut Interpreter::new(Contract::default(), 0, false),  (0,0),&mut 0
+                    &mut Interpreter::new(Contract::default(), 0, false),
+                    (0, 0),
+                    &mut 0,
                 );
                 (exit, gas, Output::Call(bytes))
             }
             TransactTo::Create(scheme) => {
-                let (exit, address, ret_gas, bytes) = self.create(&mut CreateInputs {
-                    caller: tx_caller,
-                    scheme,
-                    value: tx_value,
-                    init_code: tx_data,
-                    gas_limit: transact_gas_limit,
-                }, &mut 0);
+                let (exit, address, ret_gas, bytes) = self.create(
+                    &mut CreateInputs {
+                        caller: tx_caller,
+                        scheme,
+                        value: tx_value,
+                        init_code: tx_data,
+                        gas_limit: transact_gas_limit,
+                    },
+                    &mut 0,
+                );
                 (exit, ret_gas, Output::Create(bytes, address))
             }
         };
@@ -536,7 +543,11 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> EVMImpl<'a, GSPEC, DB, 
         } else if !bytecode.is_empty() {
             // Create interpreter and execute subcall
             let (exit_reason, interpreter) = self.run_interpreter(
-                Contract::new_with_context_analyzed(inputs.input.clone(), bytecode, &inputs.context),
+                Contract::new_with_context_analyzed(
+                    inputs.input.clone(),
+                    bytecode,
+                    &inputs.context,
+                ),
                 gas.limit(),
                 inputs.is_static,
             );
@@ -563,7 +574,12 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
         self.inspector.step(interp, &mut self.data)
     }
 
-    fn step_end(&mut self, interp: &mut Interpreter, ret: InstructionResult, _: &mut u32) -> InstructionResult {
+    fn step_end(
+        &mut self,
+        interp: &mut Interpreter,
+        ret: InstructionResult,
+        _: &mut u32,
+    ) -> InstructionResult {
         self.inspector.step_end(interp, &mut self.data, ret)
     }
 
@@ -603,7 +619,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
         let db = &mut self.data.db;
         let error = &mut self.data.error;
 
-        let (acc, is_cold) = journal
+        let (_acc, is_cold) = journal
             .load_code(address, db)
             .map_err(|e| *error = Some(e))
             .ok()?;
@@ -676,7 +692,7 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
     fn create(
         &mut self,
         inputs: &mut CreateInputs,
-        _: &mut u32
+        _: &mut u32,
     ) -> (InstructionResult, Option<B160>, Gas, Bytes) {
         // Call inspector
         if INSPECT {
@@ -694,7 +710,13 @@ impl<'a, GSPEC: Spec, DB: Database + 'a, const INSPECT: bool> Host<u32>
         }
     }
 
-    fn call(&mut self, inputs: &mut CallInputs, _: &mut Interpreter, output_info: (usize, usize), _: &mut u32) -> (InstructionResult, Gas, Bytes) {
+    fn call(
+        &mut self,
+        inputs: &mut CallInputs,
+        _: &mut Interpreter,
+        _output_info: (usize, usize),
+        _: &mut u32,
+    ) -> (InstructionResult, Gas, Bytes) {
         if INSPECT {
             let (ret, gas, out) = self.inspector.call(&mut self.data, inputs);
             if ret != InstructionResult::Continue {
