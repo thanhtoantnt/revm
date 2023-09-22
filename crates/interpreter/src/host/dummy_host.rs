@@ -1,4 +1,4 @@
-use crate::primitives::{hash_map::Entry, Bytecode, Bytes, HashMap, U256};
+use crate::primitives::{hash_map::Entry, Bytes, HashMap, U256};
 use crate::{primitives::{Env, Log, B160, B256, KECCAK_EMPTY}, CallInputs, CreateInputs, Gas, Host, InstructionResult, Interpreter, SelfDestructResult, BytecodeLocked};
 use alloc::vec::Vec;
 use std::sync::Arc;
